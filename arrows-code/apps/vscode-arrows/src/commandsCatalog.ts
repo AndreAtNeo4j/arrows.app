@@ -43,6 +43,14 @@ export const COMMANDS: ArrowsCommand[] = [
     surface: { sidebar: true, embedMenu: false },
   },
   {
+    id: 'arrows.pullSchema',
+    title: 'Pull schema from Neo4j…',
+    icon: 'database',
+    description: 'Read a live database schema into a new graph',
+    webview: false,
+    surface: { sidebar: true, embedMenu: false },
+  },
+  {
     id: 'arrows.validate',
     title: 'Validate graph',
     icon: 'check',

@@ -11,5 +11,6 @@ export {
 } from './file';
 export { exportGraphQL, exportSvg, makeCopyCypher, makeExportCypher, openInArrowsApp } from './export';
 export { makeFormat } from './format';
+export { makePullSchema } from './pullSchema';
 export { makeValidate } from './validate';
 export { renameLabel, renameRelType } from './rename';
