@@ -1,0 +1,8 @@
+{
+  "name": "@arrows-code/neo4j-client",
+  "version": "0.0.1",
+  "type": "commonjs",
+  "dependencies": {
+    "neo4j-driver": "^5.8.1"
+  }
+}
