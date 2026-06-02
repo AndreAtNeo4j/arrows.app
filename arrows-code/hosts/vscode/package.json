@@ -20,26 +20,6 @@
     "onView:arrowsExplorer"
   ],
   "contributes": {
-    "configuration": {
-      "title": "Arrows",
-      "properties": {
-        "arrows.neo4j.uri": {
-          "type": "string",
-          "default": "",
-          "markdownDescription": "Neo4j connection URI for **Pull schema from Neo4j**, e.g. `neo4j+s://xxxx.databases.neo4j.io`. Leave empty to be prompted each time."
-        },
-        "arrows.neo4j.user": {
-          "type": "string",
-          "default": "neo4j",
-          "description": "Neo4j username used when pulling a schema."
-        },
-        "arrows.neo4j.database": {
-          "type": "string",
-          "default": "",
-          "description": "Target database name. Leave empty to use the connection's default database."
-        }
-      }
-    },
     "languages": [
       {
         "id": "arrows",
@@ -89,7 +69,6 @@
       { "command": "arrows.newGraph",          "title": "New graph",                  "category": "Arrows", "icon": "$(add)" },
       { "command": "arrows.newFromExample",    "title": "New from example…",          "category": "Arrows", "icon": "$(library)" },
       { "command": "arrows.import",            "title": "Import shared graph…",       "category": "Arrows", "icon": "$(cloud-download)" },
-      { "command": "arrows.pullSchema",        "title": "Pull schema from Neo4j…",    "category": "Arrows", "icon": "$(database)" },
       { "command": "arrows.openSource",        "title": "Show JSON side by side",     "category": "Arrows", "icon": "$(split-horizontal)" },
       { "command": "arrows.openPreviewToSide", "title": "Show canvas side by side",   "category": "Arrows", "icon": "$(open-preview)" },
       { "command": "arrows.format",            "title": "Auto-arrange nodes…",        "category": "Arrows", "icon": "$(symbol-namespace)" },
@@ -164,8 +143,6 @@
   "dependencies": {
     "@arrows-code/format-json": "*",
     "@arrows-code/graph-logic": "*",
-    "@arrows-code/host-protocol": "*",
-    "@arrows-code/neo4j-client": "*",
-    "neo4j-driver": "^5.8.1"
+    "@arrows-code/host-protocol": "*"
   }
 }

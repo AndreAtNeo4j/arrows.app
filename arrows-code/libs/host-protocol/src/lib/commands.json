@@ -2,7 +2,6 @@
   { "id": "arrows.newGraph", "title": "New graph", "icon": "add", "description": "New untitled graph", "webview": false, "surface": { "sidebar": true, "embedMenu": false } },
   { "id": "arrows.newFromExample", "title": "New from example…", "icon": "library", "description": "Copy a bundled graph here", "webview": false, "surface": { "sidebar": true, "embedMenu": false } },
   { "id": "arrows.import", "title": "Import shared graph…", "icon": "cloud-download", "description": "Paste an arrows.app URL or JSON", "webview": false, "surface": { "sidebar": true, "embedMenu": false } },
-  { "id": "arrows.pullSchema", "title": "Pull schema from Neo4j…", "icon": "database", "description": "Read a live database schema into a new graph", "webview": false, "surface": { "sidebar": true, "embedMenu": false } },
   { "id": "arrows.validate", "title": "Validate graph", "icon": "check", "description": "Check IDs, refs, style keys", "webview": true, "surface": { "sidebar": false, "embedMenu": true } },
   { "id": "arrows.format", "title": "Auto-arrange nodes…", "icon": "symbol-namespace", "description": "Pick a layout: force, hierarchical, radial, circular, grid", "webview": true, "surface": { "sidebar": false, "embedMenu": true }, "shortcut": { "mod": "shift+alt", "key": "F" } },
   { "id": "arrows.openSource", "title": "Show JSON side by side", "icon": "split-horizontal", "description": "Open the JSON in a side panel", "webview": true, "surface": { "sidebar": false, "embedMenu": true }, "shortcut": { "mod": "cmd", "key": "K V" } },
