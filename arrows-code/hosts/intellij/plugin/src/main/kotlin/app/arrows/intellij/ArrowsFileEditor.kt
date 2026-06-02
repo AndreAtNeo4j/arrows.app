@@ -8,7 +8,11 @@ import app.arrows.intellij.protocol.CYPHER_CLAUSES
 import app.arrows.intellij.protocol.arrowsAppImportUrl
 import app.arrows.intellij.protocol.dispatchInbound
 import app.arrows.intellij.protocol.isAllowedExternalUrl
+import app.arrows.intellij.protocol.labelsInGraph
 import app.arrows.intellij.protocol.parseCommandMenu
+import app.arrows.intellij.protocol.relTypesInGraph
+import app.arrows.intellij.protocol.renameLabelInGraph
+import app.arrows.intellij.protocol.renameRelTypeInGraph
 import app.arrows.intellij.protocol.supportedEmbedMenu
 import app.arrows.intellij.protocol.TUTORIAL_URL
 import com.intellij.ide.BrowserUtil
@@ -199,6 +203,8 @@ class ArrowsFileEditor(
             "arrows.exportCypher" -> withCypherClause { export("cypher", JSONObject().put("keyword", it), "cypher", "Cypher") }
             "arrows.copyCypher" -> withCypherClause { copyCypher(it) }
             "arrows.openSource" -> showJson()
+            "arrows.renameLabel" -> renameIn("Rename Label", "label", ::labelsInGraph, ::renameLabelInGraph)
+            "arrows.renameRelType" -> renameIn("Rename Relationship Type", "relationship type", ::relTypesInGraph, ::renameRelTypeInGraph)
             else -> thisLogger().warn("arrows: unhandled embed command '$name'")
         }
     }
@@ -211,6 +217,30 @@ class ArrowsFileEditor(
                 CYPHER_CLAUSES.toTypedArray(), CYPHER_CLAUSES.first(), null,
             ) ?: return@invokeLater
             then(clause)
+        }
+    }
+
+    // Rename a label / relationship type everywhere — a plain JSON edit (no graph-logic).
+    private fun renameIn(
+        title: String,
+        noun: String,
+        values: (String) -> List<String>,
+        rewrite: (String, String, String) -> String,
+    ) {
+        ApplicationManager.getApplication().invokeLater {
+            val doc = document ?: return@invokeLater
+            val options = values(doc.text)
+            if (options.isEmpty()) {
+                Messages.showInfoMessage(project, "No ${noun}s in this graph.", title)
+                return@invokeLater
+            }
+            val old = Messages.showEditableChooseDialog(
+                "$noun to rename", title, null, options.toTypedArray(), options.first(), null,
+            ) ?: return@invokeLater
+            val new = Messages.showInputDialog(project, "Rename \"$old\" to", title, null, old, null)
+                ?.trim()?.takeIf { it.isNotEmpty() && it != old } ?: return@invokeLater
+            val next = rewrite(doc.text, old, new)
+            if (next != doc.text) WriteCommandAction.runWriteCommandAction(project) { doc.setText(next) }
         }
     }
 

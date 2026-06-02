@@ -10,6 +10,7 @@ import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import app.arrows.intellij.protocol.isGeneratedPath
+import app.arrows.intellij.protocol.parseImportInput
 import com.intellij.openapi.roots.ProjectFileIndex
 import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.ui.Messages
@@ -93,6 +94,7 @@ private class ArrowsToolWindowPanel(private val project: Project) : SimpleToolWi
         root.add(section("Quick actions", listOf(
             Node.Action("New graph") { newGraph() },
             Node.Action("New from example…") { newFromExample() },
+            Node.Action("Import shared graph…") { importSharedGraph() },
         )))
         val files = workspaceArrowsFiles(project)
         root.add(section("In this workspace",
@@ -137,6 +139,18 @@ private class ArrowsToolWindowPanel(private val project: Project) : SimpleToolWi
             EXAMPLE_NAMES.toTypedArray(), EXAMPLE_NAMES.first(), null
         ) ?: return
         useExampleAsTemplate(choice)
+    }
+
+    private fun importSharedGraph() {
+        val input = Messages.showInputDialog(project, "Paste an arrows.app share URL or graph JSON", "Import Shared Graph", null)
+            ?.takeIf { it.isNotBlank() } ?: return
+        val graphJson = parseImportInput(input) ?: run {
+            Messages.showErrorDialog(project, "Couldn't read an arrows graph from that input.", "Import Shared Graph")
+            return
+        }
+        val dir = ProjectRootManager.getInstance(project).contentRoots.firstOrNull() ?: return
+        val name = promptFileName("imported.arrows") ?: return
+        writeAndOpen(dir, name, graphJson)
     }
 
     private fun useExampleAsTemplate(name: String) {

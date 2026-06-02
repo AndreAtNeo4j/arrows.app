@@ -30,8 +30,8 @@ fun parseCommandMenu(json: String): List<CommandEntry> {
     return result
 }
 
-// validate/format/renameLabel/renameRelType need graph-logic the JVM host can't
-// run, so the IntelliJ kebab advertises only what it can service.
+// validate/format need graph-logic (validator/layout) the JVM host can't run, so
+// the kebab advertises only what it can service. rename is a plain JSON edit.
 val SUPPORTED_EMBED_COMMANDS = setOf(
     "arrows.openSource",
     "arrows.copyCypher",
@@ -39,6 +39,8 @@ val SUPPORTED_EMBED_COMMANDS = setOf(
     "arrows.exportSvg",
     "arrows.exportGraphQL",
     "arrows.openInArrowsApp",
+    "arrows.renameLabel",
+    "arrows.renameRelType",
 )
 
 fun supportedEmbedMenu(entries: List<CommandEntry>): List<CommandEntry> =
