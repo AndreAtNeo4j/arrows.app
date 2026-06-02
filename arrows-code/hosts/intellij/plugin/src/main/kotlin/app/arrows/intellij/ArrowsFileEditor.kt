@@ -23,6 +23,7 @@ import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorState
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.ide.CopyPasteManager
+import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.UserDataHolderBase
@@ -195,9 +196,9 @@ class ArrowsFileEditor(
         when (name) {
             "arrows.openInArrowsApp" -> openInArrowsApp()
             "arrows.exportSvg" -> export("svg", null, "svg", "SVG")
-            "arrows.exportCypher" -> export("cypher", JSONObject().put("keyword", "CREATE"), "cypher", "Cypher")
             "arrows.exportGraphQL" -> export("graphql", null, "graphql", "GraphQL")
-            "arrows.copyCypher" -> copyCypher()
+            "arrows.exportCypher" -> withCypherClause { export("cypher", JSONObject().put("keyword", it), "cypher", "Cypher") }
+            "arrows.copyCypher" -> withCypherClause { copyCypher(it) }
             "arrows.openSource" -> showJson()
             // Need shared graph logic (layout/patch/validator) the JVM host can't run yet.
             "arrows.validate", "arrows.format", "arrows.renameLabel", "arrows.renameRelType" -> notifyUnsupported(name)
@@ -205,8 +206,18 @@ class ArrowsFileEditor(
         }
     }
 
-    private fun copyCypher() {
-        requestFromEmbed("cypher", JSONObject().put("keyword", "CREATE")).whenComplete { result, err ->
+    // Same clause choice as the VS Code host (cypherClause.ts). Dialog must run on the EDT.
+    private fun withCypherClause(then: (String) -> Unit) {
+        ApplicationManager.getApplication().invokeLater {
+            val clause = Messages.showEditableChooseDialog(
+                "Cypher clause", "Cypher", null, arrayOf("CREATE", "MATCH", "MERGE"), "CREATE", null,
+            ) ?: return@invokeLater
+            then(clause)
+        }
+    }
+
+    private fun copyCypher(clause: String) {
+        requestFromEmbed("cypher", JSONObject().put("keyword", clause)).whenComplete { result, err ->
             ApplicationManager.getApplication().invokeLater {
                 if (err != null || result == null) thisLogger().warn("arrows copy Cypher failed: ${err?.message ?: "no result"}")
                 else CopyPasteManager.getInstance().setContents(StringSelection(result))
