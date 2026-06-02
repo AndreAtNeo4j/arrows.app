@@ -43,7 +43,13 @@ tasks.processResources {
         from(embedBundle) { into("embed") }
     }
     from(sharedMedia) { include("sidebar-icon.svg"); into("icons"); rename { "arrows.svg" } }
-    from(sharedMedia) { include("file-icon.svg"); into("icons"); rename { "arrows-file.svg" } }
+    // IntelliJ file-type icons are 16x16; the source SVG is 256px, so size this copy down (same artwork).
+    from(sharedMedia) {
+        include("file-icon.svg")
+        into("icons")
+        rename { "arrows-file.svg" }
+        filter { line -> line.replace("width=\"256px\" height=\"256px\"", "width=\"16\" height=\"16\"") }
+    }
     from(sharedMedia) { include("file-icon.svg"); into("META-INF"); rename { "pluginIcon.svg" } }
     from(examples) { include("*.arrows"); into("examples") }
     from(rootProject.file("../../libs/host-protocol/src/lib")) { include("commands.json", "new-graph.json") }
