@@ -10,8 +10,10 @@ nx/TypeScript build.
   mirror the TS `host-protocol` wire contract (a Kotlin host can't import the TS
   lib, so it validates the same shapes). Run `./gradlew :protocol:test`.
 - **`plugin/`** — JCEF `FileEditor` for `*.arrows` with the postMessage bridge
-  and two-way Document sync, built on the IntelliJ Platform SDK. Compiles and
-  packages (`buildPlugin`). Sidebar/commands/export round-trip not wired yet.
+  and two-way Document sync. Sidebar (new/example/import), the kebab commands
+  (show JSON, copy/save Cypher, save SVG/GraphQL, open in arrows.app, rename
+  label/rel type), and the export round-trip are wired. validate and
+  auto-arrange are not — they need graph-logic the JVM host can't run.
 
 ## Tests
 
@@ -41,15 +43,14 @@ The canvas needs the shared embed bundle: build it first (`cd ../vscode &&
 npm run build`), which produces `dist/apps/arrows-ts`; the plugin build copies it
 in. Without it, a placeholder page loads.
 
-## What it will be
+## What it is
 
-A thin Kotlin/Gradle adapter. It reimplements only host plumbing against the
-IntelliJ Platform:
+A thin Kotlin/Gradle adapter — only host plumbing against the IntelliJ Platform:
 
-- `JBCefBrowser` loading the shared embed bundle (served via a scheme handler)
+- `JBCefBrowser` (windowed) loading the shared embed bundle via a scheme handler
 - `JBCefJSQuery` ↔ `executeJavaScript` for the postMessage bridge
 - `FileEditorProvider` / `FileEditor` for `*.arrows`, two-way synced to the Document
-- `ToolWindow` sidebar, `AnAction` commands, `PasswordSafe`, `PersistentStateComponent`
+- `ToolWindow` sidebar + the embed kebab commands
 
 ## What it must NOT do
 

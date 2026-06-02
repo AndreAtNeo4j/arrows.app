@@ -54,4 +54,11 @@ class CommandSurfaceTest {
             supportedEmbedMenu(parseCommandMenu(json)).map { it.id },
         )
     }
+
+    @Test
+    fun everySupportedCommandExistsInTheCatalog() {
+        val json = javaClass.getResourceAsStream("/commands.json")!!.bufferedReader().use { it.readText() }
+        val catalogIds = parseCommandMenu(json).map { it.id }.toSet()
+        assertEquals(emptySet(), SUPPORTED_EMBED_COMMANDS - catalogIds)
+    }
 }

@@ -8,12 +8,12 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class HostLogicTest {
-    // open-external action
     @Test
     fun allowsKnownHttpsHosts() {
         assertTrue(isAllowedExternalUrl("https://neo4j.com/labs/arrows"))
         assertTrue(isAllowedExternalUrl("https://github.com/neo4j-labs/arrows.app"))
         assertTrue(isAllowedExternalUrl("https://www.youtube.com/watch?v=x"))
+        assertTrue(isAllowedExternalUrl("HTTPS://neo4j.com"))   // scheme is case-insensitive
     }
 
     @Test
@@ -30,7 +30,6 @@ class HostLogicTest {
         assertFalse(isAllowedExternalUrl("not a url"))                   // unparseable / no host
     }
 
-    // open-in-arrows.app action
     @Test
     fun buildsAndRoundTripsArrowsAppImportUrl() {
         val graph = """{"nodes":[],"relationships":[],"style":{}}"""
@@ -41,7 +40,16 @@ class HostLogicTest {
         assertEquals(graph, String(Base64.getDecoder().decode(b64)))
     }
 
-    // tool-window workspace scan
+    @Test
+    fun arrowsAppShareCompactsParsesAndFlagsLargeGraphs() {
+        assertNull(arrowsAppShare("not json"))                                  // unparseable -> null
+        val small = arrowsAppShare("""{"nodes":[ ],"relationships":[ ]}""")!!
+        assertTrue(small.first.startsWith("https://arrows.app/#/import/json="))
+        assertFalse(small.second)                                               // small -> no warning
+        val big = arrowsAppShare("""{"nodes":[],"x":"${"a".repeat(ARROWS_APP_URL_WARN_BYTES + 1)}"}""")!!
+        assertTrue(big.second)                                                  // large -> warn
+    }
+
     @Test
     fun skipsGeneratedOutputPaths() {
         assertTrue(isGeneratedPath("/proj/build/x.arrows"))
@@ -56,13 +64,11 @@ class HostLogicTest {
         assertFalse(isGeneratedPath("/proj/arrows-code/fixtures/examples/social.arrows"))
     }
 
-    // Cypher clause picker
     @Test
     fun cypherClausesInCanonicalOrder() {
         assertEquals(listOf("CREATE", "MATCH", "MERGE"), CYPHER_CLAUSES)
     }
 
-    // Embed scheme handler resource resolution
     @Test
     fun resolvesEmbedResourcePaths() {
         assertEquals("/embed/embed.html", embedResourcePath("http://arrows.local/"))
@@ -73,6 +79,7 @@ class HostLogicTest {
     @Test
     fun rejectsTraversalAndUnparseableUrls() {
         assertNull(embedResourcePath("http://arrows.local/../META-INF/plugin.xml"))
+        assertNull(embedResourcePath("http://arrows.local/%252e%252e/META-INF/plugin.xml")) // double-encoded
         assertNull(embedResourcePath("::::"))
     }
 

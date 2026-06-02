@@ -4,7 +4,6 @@ import org.json.JSONObject
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 class GraphEditsTest {
     private val graph = """
@@ -59,8 +58,14 @@ class GraphEditsTest {
     }
 
     @Test
-    fun editsLeaveJsonWellFormed() {
-        assertTrue(renameLabelInGraph(graph, "Nope", "X").contains("\"nodes\""))
+    fun decodesArrowsAppShareUrlsAndRejectsJunk() {
+        val payload = """{"nodes":[{"id":"n0","labels":["Person"]}],"relationships":[]}"""
+        val url = arrowsAppImportUrl(payload)                                    // base64 here ends in '==' padding
+        assertEquals(payload, parseImportInput(url))                             // exercises URLDecoder %3D path
+        assertEquals(payload, parseImportInput(url.replace("https://", "http://"))) // http form accepted
+        assertNull(parseImportInput("https://arrows.app/"))                      // no import fragment
+        assertNull(parseImportInput("https://arrows.app/#/import/json=!!!notb64"))// invalid base64
+        assertNull(parseImportInput("x".repeat(5 * 1024 * 1024)))                // over size cap
     }
 }
 

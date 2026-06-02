@@ -154,6 +154,7 @@ private class ArrowsToolWindowPanel(private val project: Project) : SimpleToolWi
     }
 
     private fun useExampleAsTemplate(name: String) {
+        if (name !in EXAMPLE_NAMES) return
         val content = javaClass.getResourceAsStream("/examples/$name.arrows")?.bufferedReader()?.use { it.readText() }
             ?: return
         val dir = ProjectRootManager.getInstance(project).contentRoots.firstOrNull() ?: return
@@ -168,10 +169,14 @@ private class ArrowsToolWindowPanel(private val project: Project) : SimpleToolWi
     }
 
     private fun writeAndOpen(dir: VirtualFile, fileName: String, content: String) {
+        val existing = dir.findChild(fileName)
+        if (existing != null && Messages.showOkCancelDialog(
+                project, "$fileName already exists. Overwrite it?", "Arrows", "Overwrite", "Cancel", null,
+            ) != Messages.OK
+        ) return
         WriteCommandAction.runWriteCommandAction(project) {
-            val existing = dir.findChild(fileName)
             val file = existing ?: dir.createChildData(this, fileName)
-            if (existing == null) VfsUtil.saveText(file, content)
+            VfsUtil.saveText(file, content)
             FileEditorManager.getInstance(project).openFile(file, true)
         }
         refresh()

@@ -5,18 +5,15 @@ import org.json.JSONObject
 import java.net.URLDecoder
 import java.util.Base64
 
-/**
- * Pure .arrows JSON edits behind the host actions, kept here so they're unit
- * tested without the IDE. Mirror the VS Code commands (import, rename) but
- * reimplement the transforms in Kotlin since the TS graph-logic can't be shared.
- */
+// Pure .arrows JSON edits (import, rename), reimplemented in Kotlin since the TS graph-logic can't be shared.
 
 private val IMPORT_JSON = Regex("""[#/]?/?import/json=([^&\s]+)""")
+private const val MAX_IMPORT_BYTES = 4 * 1024 * 1024
 
 /** Inverse of [arrowsAppImportUrl]: decode an arrows.app share URL or accept raw graph JSON. */
 fun parseImportInput(raw: String): String? {
     val trimmed = raw.trim()
-    if (trimmed.isEmpty()) return null
+    if (trimmed.isEmpty() || trimmed.length > MAX_IMPORT_BYTES) return null
     if (trimmed.startsWith("http://", true) || trimmed.startsWith("https://", true) || trimmed.contains("import/json=")) {
         val encoded = IMPORT_JSON.find(trimmed)?.groupValues?.get(1) ?: return null
         return runCatching { String(Base64.getDecoder().decode(URLDecoder.decode(encoded, "UTF-8"))) }.getOrNull()
@@ -27,15 +24,21 @@ fun parseImportInput(raw: String): String? {
     return null
 }
 
-fun labelsInGraph(json: String): List<String> = collectStrings(json, "nodes") { it.optJSONArray("labels") }
-fun relTypesInGraph(json: String): List<String> = collectStrings(json, "relationships") { JSONArray().put(it.optString("type")) }
-
-private fun collectStrings(json: String, arrayKey: String, pick: (JSONObject) -> JSONArray?): List<String> {
-    val arr = runCatching { JSONObject(json).optJSONArray(arrayKey) }.getOrNull() ?: return emptyList()
+fun labelsInGraph(json: String): List<String> {
+    val nodes = runCatching { JSONObject(json).optJSONArray("nodes") }.getOrNull() ?: return emptyList()
     val out = sortedSetOf<String>()
-    for (i in 0 until arr.length()) {
-        val values = arr.optJSONObject(i)?.let(pick) ?: continue
-        for (j in 0 until values.length()) values.optString(j).takeIf { it.isNotEmpty() }?.let(out::add)
+    for (i in 0 until nodes.length()) {
+        val labels = nodes.optJSONObject(i)?.optJSONArray("labels") ?: continue
+        for (j in 0 until labels.length()) labels.optString(j).takeIf { it.isNotEmpty() }?.let(out::add)
+    }
+    return out.toList()
+}
+
+fun relTypesInGraph(json: String): List<String> {
+    val rels = runCatching { JSONObject(json).optJSONArray("relationships") }.getOrNull() ?: return emptyList()
+    val out = sortedSetOf<String>()
+    for (i in 0 until rels.length()) {
+        rels.optJSONObject(i)?.optString("type")?.takeIf { it.isNotEmpty() }?.let(out::add)
     }
     return out.toList()
 }

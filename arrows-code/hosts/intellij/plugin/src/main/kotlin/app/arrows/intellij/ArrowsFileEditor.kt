@@ -5,7 +5,7 @@ import app.arrows.intellij.protocol.GraphPayload
 import app.arrows.intellij.protocol.HostActions
 import app.arrows.intellij.protocol.RequestTracker
 import app.arrows.intellij.protocol.CYPHER_CLAUSES
-import app.arrows.intellij.protocol.arrowsAppImportUrl
+import app.arrows.intellij.protocol.arrowsAppShare
 import app.arrows.intellij.protocol.dispatchInbound
 import app.arrows.intellij.protocol.isAllowedExternalUrl
 import app.arrows.intellij.protocol.labelsInGraph
@@ -63,9 +63,7 @@ class ArrowsFileEditor(
 ) : UserDataHolderBase(), FileEditor, HostActions {
 
     private val document: Document? = FileDocumentManager.getInstance().getDocument(file)
-    // Windowed (native, GPU-composited), not the platform-default OSR: OSR copies
-    // every frame to a bitmap and paints it on the EDT, which makes canvas dragging
-    // laggy on HiDPI.
+    // Windowed (native, GPU-composited): the default OSR bitmaps each frame onto the EDT — laggy dragging on HiDPI.
     private val browser: JBCefBrowser? =
         if (JBCefApp.isSupported()) JBCefBrowser.createBuilder().setOffScreenRendering(false).build() else null
     private val jsQuery: JBCefJSQuery? = browser?.let { JBCefJSQuery.create(it as JBCefBrowserBase) }
@@ -103,6 +101,7 @@ class ArrowsFileEditor(
         val js = """
             window.__arrowsToHost = function(payload) { ${q.inject("payload")} };
             window.addEventListener('message', function(e) {
+                if (e.source !== window) return;
                 try { window.__arrowsToHost(JSON.stringify(e.data)); } catch (err) {}
             });
         """.trimIndent()
@@ -113,7 +112,9 @@ class ArrowsFileEditor(
         // JCEF callbacks fire off the EDT; hop to it before reading the Document.
         ApplicationManager.getApplication().invokeLater {
             val doc = document ?: return@invokeLater
-            val graph = try { JSONObject(doc.text) } catch (e: JSONException) { return@invokeLater }
+            val graph = try { JSONObject(doc.text) } catch (e: JSONException) {
+                thisLogger().warn("arrows: document is not valid JSON; canvas not updated"); return@invokeLater
+            }
             val message = JSONObject()
                 .put("type", "load")
                 .put("graph", graph)
@@ -156,6 +157,7 @@ class ArrowsFileEditor(
             ApplicationManager.getApplication().invokeLater {
                 if (err != null || result == null) {
                     thisLogger().warn("arrows $label export failed: ${err?.message ?: "no result"}")
+                    Messages.showErrorDialog(project, "Couldn't generate the $label export (the canvas didn't respond).", "Arrows")
                     return@invokeLater
                 }
                 val descriptor = FileSaverDescriptor("Save $label", "", ext)
@@ -170,7 +172,16 @@ class ArrowsFileEditor(
     private fun openInArrowsApp() {
         ApplicationManager.getApplication().invokeLater {
             val text = document?.text ?: return@invokeLater
-            BrowserUtil.browse(arrowsAppImportUrl(text))
+            val share = arrowsAppShare(text) ?: run {
+                Messages.showWarningDialog(project, "This graph doesn't parse cleanly; can't open it in arrows.app.", "Open in arrows.app")
+                return@invokeLater
+            }
+            if (share.second && Messages.showOkCancelDialog(
+                    project, "This graph is large; some browsers may reject the URL.",
+                    "Open in arrows.app", "Open anyway", "Cancel", null,
+                ) != Messages.OK
+            ) return@invokeLater
+            BrowserUtil.browse(share.first)
         }
     }
 
@@ -178,9 +189,10 @@ class ArrowsFileEditor(
 
     override fun onGraphChanged(graph: GraphPayload, docVersion: Long?) {
         val doc = document ?: return
-        // Write the graph back verbatim - preserves style and every top-level
-        // field. (Canonical key ordering would need the bundle to emit it.)
-        val nextText = JSONObject(graph.raw).toString(2)
+        // Write back verbatim to preserve style and top-level fields.
+        val nextText = try { JSONObject(graph.raw).toString(2) } catch (e: JSONException) {
+            thisLogger().warn("arrows: graph-changed payload didn't serialize; not written", e); return
+        }
         ApplicationManager.getApplication().invokeLater {
             if (project.isDisposed || doc.text == nextText) return@invokeLater
             applyingHostEdit = true
@@ -229,7 +241,12 @@ class ArrowsFileEditor(
     ) {
         ApplicationManager.getApplication().invokeLater {
             val doc = document ?: return@invokeLater
-            val options = values(doc.text)
+            val text = doc.text
+            if (runCatching { JSONObject(text) }.isFailure) {
+                Messages.showWarningDialog(project, "This graph doesn't parse cleanly.", title)
+                return@invokeLater
+            }
+            val options = values(text)
             if (options.isEmpty()) {
                 Messages.showInfoMessage(project, "No ${noun}s in this graph.", title)
                 return@invokeLater
@@ -239,16 +256,18 @@ class ArrowsFileEditor(
             ) ?: return@invokeLater
             val new = Messages.showInputDialog(project, "Rename \"$old\" to", title, null, old, null)
                 ?.trim()?.takeIf { it.isNotEmpty() && it != old } ?: return@invokeLater
-            val next = rewrite(doc.text, old, new)
-            if (next != doc.text) WriteCommandAction.runWriteCommandAction(project) { doc.setText(next) }
+            val next = rewrite(text, old, new)
+            if (next != text) WriteCommandAction.runWriteCommandAction(project) { doc.setText(next) }
         }
     }
 
     private fun copyCypher(clause: String) {
         requestFromEmbed("cypher", JSONObject().put("keyword", clause)).whenComplete { result, err ->
             ApplicationManager.getApplication().invokeLater {
-                if (err != null || result == null) thisLogger().warn("arrows copy Cypher failed: ${err?.message ?: "no result"}")
-                else CopyPasteManager.getInstance().setContents(StringSelection(result))
+                if (err != null || result == null) {
+                    thisLogger().warn("arrows copy Cypher failed: ${err?.message ?: "no result"}")
+                    Messages.showErrorDialog(project, "Couldn't copy Cypher (the canvas didn't respond).", "Arrows")
+                } else CopyPasteManager.getInstance().setContents(StringSelection(result))
             }
         }
     }
@@ -257,13 +276,13 @@ class ArrowsFileEditor(
         ApplicationManager.getApplication().invokeLater {
             if (project.isDisposed) return@invokeLater
             val source = FileEditorManagerEx.getInstanceEx(project).currentWindow ?: return@invokeLater
-            // Canvas stays in this pane; open JSON in the split beside it. The split's editors
-            // load async, so flip it to the text view once its composite is populated.
+            // Canvas stays here; open JSON in the split beside it.
             val split = source.split(SwingConstants.VERTICAL, true, file, false) ?: return@invokeLater
-            selectJsonWhenLoaded(split, attempts = 40)
+            selectJsonWhenLoaded(split, attempts = JSON_SPLIT_POLL_ATTEMPTS)
         }
     }
 
+    // The split's EditorComposite loads its editors async; poll until the text view appears.
     private fun selectJsonWhenLoaded(window: EditorWindow, attempts: Int) {
         if (project.isDisposed) return
         val composite = window.getComposite(file)
@@ -298,6 +317,7 @@ class ArrowsFileEditor(
     }
 
     private companion object {
+        private const val JSON_SPLIT_POLL_ATTEMPTS = 40
         @Volatile private var schemeRegistered = false
 
         fun registerSchemeHandler() {
