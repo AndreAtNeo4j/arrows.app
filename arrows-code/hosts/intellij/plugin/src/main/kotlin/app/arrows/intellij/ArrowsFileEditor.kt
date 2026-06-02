@@ -226,10 +226,10 @@ class ArrowsFileEditor(
     private fun showJson() {
         ApplicationManager.getApplication().invokeLater {
             if (project.isDisposed) return@invokeLater
-            val manager = FileEditorManagerEx.getInstanceEx(project)
-            val window = manager.currentWindow ?: return@invokeLater
-            window.split(SwingConstants.VERTICAL, true, file, true)
-            manager.setSelectedEditor(file, TextEditorProvider.getInstance().editorTypeId)
+            val window = FileEditorManagerEx.getInstanceEx(project).currentWindow ?: return@invokeLater
+            val split = window.split(SwingConstants.VERTICAL, true, file, true) ?: return@invokeLater
+            // split opens the canvas (default view); flip the new pane to the JSON text editor.
+            split.getComposite(file)?.setSelectedEditor(TextEditorProvider.getInstance().editorTypeId)
         }
     }
 
