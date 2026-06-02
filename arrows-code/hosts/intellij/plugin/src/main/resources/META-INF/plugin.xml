@@ -13,6 +13,6 @@
             fieldName="INSTANCE"
             extensions="arrows"/>
         <fileEditorProvider implementation="app.arrows.intellij.ArrowsFileEditorProvider"/>
-        <toolWindow id="Arrows" anchor="left" factoryClass="app.arrows.intellij.ArrowsToolWindowFactory"/>
+        <toolWindow id="Arrows" anchor="left" icon="/icons/arrows.svg" factoryClass="app.arrows.intellij.ArrowsToolWindowFactory"/>
     </extensions>
 </idea-plugin>

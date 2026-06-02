@@ -35,11 +35,16 @@ intellijPlatform {
 // Ship the shared embed bundle if it has been built (dist/apps/arrows-ts, the
 // same artifact the VS Code host bundles). Drop the placeholder when present.
 val embedBundle = rootProject.file("../../../dist/apps/arrows-ts")
+val sharedMedia = rootProject.file("../vscode/media")     // reuse the VS Code host's icons
+val examples = rootProject.file("../../fixtures/examples") // reuse the bundled examples
 tasks.processResources {
     if (embedBundle.exists()) {
         exclude("embed/**")
         from(embedBundle) { into("embed") }
     }
+    from(sharedMedia) { include("sidebar-icon.svg"); into("icons"); rename { "arrows.svg" } }
+    from(sharedMedia) { include("file-icon.svg"); into("META-INF"); rename { "pluginIcon.svg" } }
+    from(examples) { include("*.arrows"); into("examples") }
 }
 
 // Guard against packaging a blank plugin: buildPlugin must ship the real canvas,
