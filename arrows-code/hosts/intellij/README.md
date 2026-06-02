@@ -6,12 +6,27 @@ nx/TypeScript build.
 
 ## Status
 
-- **`protocol/`** — built and tested. `parseInboundMessage` mirrors the TS
-  `host-protocol` wire contract (a Kotlin host can't import the TS lib, so it
-  validates the same shapes). Run `./gradlew test`.
-- **Platform glue** (JCEF browser, `FileEditorProvider`, `plugin.xml`,
-  `ToolWindow`) — pending. Needs the IntelliJ Platform SDK and is developed in
-  an IDE dev setup; not unit-testable without the SDK.
+- **`protocol/`** — built and tested. `parseInboundMessage` + `dispatchInbound`
+  mirror the TS `host-protocol` wire contract (a Kotlin host can't import the TS
+  lib, so it validates the same shapes). Run `./gradlew :protocol:test`.
+- **`plugin/`** — JCEF `FileEditor` for `*.arrows` with the postMessage bridge
+  and two-way Document sync, built on the IntelliJ Platform SDK. Compiles and
+  packages (`buildPlugin`). Sidebar/commands/export round-trip not wired yet.
+
+## Build & install locally
+
+```sh
+./install-local.sh      # macOS / Linux
+install-local.bat       # Windows
+```
+
+Packages the plugin to `plugin/build/distributions/plugin.zip`, then install via
+**Settings > Plugins > (gear) Install Plugin from Disk…**. Or run a sandbox IDE
+with it loaded: `./gradlew :plugin:runIde`.
+
+The canvas needs the shared embed bundle: build it first (`cd ../vscode &&
+npm run build`), which produces `dist/apps/arrows-ts`; the plugin build copies it
+in. Without it, a placeholder page loads.
 
 ## What it will be
 
