@@ -32,6 +32,7 @@ intellijPlatform {
         version = "0.1.0"
         ideaVersion {
             sinceBuild = "243"
+            untilBuild = provider { null } // no upper bound: load on 251/261/… too
         }
     }
 }
