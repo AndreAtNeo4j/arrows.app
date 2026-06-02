@@ -1,69 +1,94 @@
-# IntelliJ host
+# Arrows for IntelliJ
 
-The IntelliJ Platform plugin that embeds the arrows canvas in a JCEF browser,
-the JVM counterpart to `../vscode`. Gradle/Kotlin project, separate from the
-nx/TypeScript build.
+The arrows.app canvas, inside a JetBrains IDE. Open a `.arrows` file and you get the editor from arrows.app — drag nodes, draw relationships, edit inline. The file stays plain JSON, so your graph models can live in git next to the code that uses them.
 
-## Status
+## Features
 
-- **`protocol/`** — built and tested. `parseInboundMessage` + `dispatchInbound`
-  mirror the TS `host-protocol` wire contract (a Kotlin host can't import the TS
-  lib, so it validates the same shapes). Run `./gradlew :protocol:test`.
-- **`plugin/`** — JCEF `FileEditor` for `*.arrows` with the postMessage bridge
-  and two-way Document sync. Sidebar (new/example/import), the kebab commands
-  (copy/save Cypher, save SVG/GraphQL, open in arrows.app, rename label/rel
-  type), and the export round-trip are wired. validate and auto-arrange need
-  graph-logic the JVM host can't run; show-JSON-side-by-side is dropped (a 2nd
-  editor on the file trips a platform NPE and makes files reopen as JSON).
+- Canvas editor for `.arrows` files
+- Cypher export (copy to clipboard or save), SVG export, GraphQL-schema export
+- Open the current graph in arrows.app, or import one from an arrows.app share link
+- Project-wide rename for labels and relationship types
+- Sidebar with your workspace's `.arrows` files plus six bundled examples
 
-## Tests
+## Install
 
-```sh
-./gradlew test            # all: pure :protocol unit tests + :plugin integration tests
-./gradlew :protocol:test  # fast pure-logic units (parse, dispatch, host logic, request tracker)
-./gradlew :plugin:test    # BasePlatformTestCase integration (editor provider, workspace scan) in a headless IDE
-```
-
-Pure logic is unit-tested in `:protocol` (mirrors the VS Code `src/*.spec.ts`).
-Host wiring is integration-tested in `:plugin` (the counterpart of the VS Code
-`commands-test.mjs`). JCEF command bodies need a live browser, so — like the VS
-Code webview checks — they aren't exercised in headless tests.
-
-## Build & install locally
+Not on the Marketplace yet — install from disk:
 
 ```sh
 ./install-local.sh      # macOS / Linux
 install-local.bat       # Windows
 ```
 
-Packages the plugin to `plugin/build/distributions/plugin.zip`, then install via
-**Settings > Plugins > (gear) Install Plugin from Disk…**. Or run a sandbox IDE
-with it loaded: `./gradlew :plugin:runIde`.
+That packages the plugin to `plugin/build/distributions/plugin.zip`; then in the IDE: **Settings → Plugins → ⚙ → Install Plugin from Disk…** and pick that zip. Or run a sandbox IDE with it loaded: `./gradlew :plugin:runIde`.
 
-The canvas needs the shared embed bundle: build it first (`cd ../vscode &&
-npm run build`), which produces `dist/apps/arrows-ts`; the plugin build copies it
-in. Without it, a placeholder page loads.
+## Getting started
 
-## What it is
+Open the **Arrows** tool window on the left and choose **New graph** (or open any `.arrows` file). From the canvas:
 
-A thin Kotlin/Gradle adapter — only host plumbing against the IntelliJ Platform:
+- Drag from a node's ring to draw a relationship.
+- Double-click empty space to add a node.
+- Right-click anything for the relevant menu.
+- Use the kebab (**⋮**) menu in the toolbar for export, rename, and open-in-arrows.app.
 
-- `JBCefBrowser` (windowed) loading the shared embed bundle via a scheme handler
-- `JBCefJSQuery` ↔ `executeJavaScript` for the postMessage bridge
-- `FileEditorProvider` / `FileEditor` for `*.arrows`, two-way synced to the Document
-- `ToolWindow` sidebar + the embed kebab commands
+Press **`?`** inside the canvas to see all shortcuts.
 
-## What it must NOT do
+## Shortcuts
 
-Reimplement feature logic. Layout, patch, validation, JSON read/write, and the
-graph operations live once — in the web bundle and the `@arrows-code/*` libs.
-A Kotlin host cannot import the TypeScript libs, so anything that must be
-single-source across both hosts belongs in the **bundle**, invoked over the
-protocol. The libs de-duplicate among TypeScript hosts; the bundle and the
-wire-protocol contract are what the two hosts genuinely share.
+| | macOS | Windows / Linux |
+|---|---|---|
+| Select / Pan tool | V / H (or hold Space) | V / H (or hold Space) |
+| Add node | Double-click empty | Double-click empty |
+| Draw relationship | Drag from node ring | Drag from node ring |
+| Add to selection | Shift+click | Shift+click |
+| Delete | Delete / Backspace | Delete / Backspace |
+| Zoom | Wheel | Wheel |
 
-## Toolchain
+## Bundled examples
 
-Gradle + IntelliJ Platform Gradle plugin — separate from the nx/TypeScript
-build. It consumes the built embed bundle and mirrors the `host-protocol`
-message contract.
+| Example | Layout |
+|---|---|
+| social | Force-directed |
+| iam-rbac | Hierarchical |
+| microservices | Hierarchical |
+| lexical-graph (GraphRAG) | Radial |
+| order-lifecycle | Circular |
+| citations | Grid |
+
+Labels are PascalCase, relationship types SCREAMING_SNAKE_CASE, properties camelCase.
+
+## File format
+
+Plain JSON, the same format arrows.app uses. The same `.arrows` file opens in arrows.app, the VS Code extension, or here — interchangeably, so it diffs cleanly in git.
+
+## FAQ
+
+**Does it phone home?** No. It's local.
+
+**Does it round-trip with arrows.app?** Yes — same format.
+
+**Why can't I edit the raw JSON in a tab?** `.arrows` always opens as the canvas; review the JSON via the git diff. (Editing it as text in a second tab tripped an IntelliJ platform bug, so it's intentionally one editor.)
+
+## Build from source
+
+The canvas is the shared web bundle, so build it first, then the plugin:
+
+```sh
+cd ../vscode && npm run build          # builds dist/apps/arrows-ts (the embed bundle)
+cd ../intellij && ./gradlew :plugin:buildPlugin
+```
+
+Tests:
+
+```sh
+./gradlew test            # pure :protocol units + :plugin headless integration tests
+```
+
+This plugin is a thin Kotlin/JCEF adapter — host plumbing only (a `JBCefBrowser` loading the bundle, the postMessage bridge, a `FileEditor` for `*.arrows`, the sidebar tool window). All feature logic lives in the web bundle and is shared with the VS Code host over the same protocol; see [../../README.md](../../README.md) for the subsystem layout.
+
+## Issues
+
+[github.com/neo4j-labs/arrows.app/issues](https://github.com/neo4j-labs/arrows.app/issues) — please include your IDE version, OS, and a small repro.
+
+## License
+
+Apache-2.0.
