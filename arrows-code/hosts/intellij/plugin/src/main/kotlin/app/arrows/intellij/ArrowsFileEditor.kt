@@ -110,7 +110,7 @@ class ArrowsFileEditor(
         // JCEF callbacks fire off the EDT; hop to it before reading the Document.
         ApplicationManager.getApplication().invokeLater {
             val doc = document ?: return@invokeLater
-            val graph = try { JSONObject(doc.text) } catch (e: JSONException) { return@invokeLater }
+            val graph = currentGraph() ?: return@invokeLater
             val message = JSONObject()
                 .put("type", "load")
                 .put("graph", graph)
@@ -148,21 +148,23 @@ class ArrowsFileEditor(
         return future
     }
 
-    private fun export(kind: String, payload: JSONObject?, ext: String, label: String) {
+    // Run an embed request, hop back to the EDT, then apply the result or log the failure.
+    private fun requestThen(kind: String, payload: JSONObject?, label: String, onResult: (String) -> Unit) {
         requestFromEmbed(kind, payload).whenComplete { result, err ->
             ApplicationManager.getApplication().invokeLater {
-                if (err != null || result == null) {
-                    thisLogger().warn("arrows $label export failed: ${err?.message ?: "no result"}")
-                    return@invokeLater
-                }
-                val descriptor = FileSaverDescriptor("Save $label", "", ext)
-                val wrapper = FileChooserFactory.getInstance()
-                    .createSaveFileDialog(descriptor, project)
-                    .save(file.parent, "${file.nameWithoutExtension}.$ext") ?: return@invokeLater
-                wrapper.file.writeText(result)
+                if (err != null || result == null) thisLogger().warn("arrows $label failed: ${err?.message ?: "no result"}")
+                else onResult(result)
             }
         }
     }
+
+    private fun export(kind: String, payload: JSONObject?, ext: String, label: String) =
+        requestThen(kind, payload, "$label export") { result ->
+            val wrapper = FileChooserFactory.getInstance()
+                .createSaveFileDialog(FileSaverDescriptor("Save $label", "", ext), project)
+                .save(file.parent, "${file.nameWithoutExtension}.$ext") ?: return@requestThen
+            wrapper.file.writeText(result)
+        }
 
     private fun openInArrowsApp() {
         ApplicationManager.getApplication().invokeLater {
@@ -175,19 +177,9 @@ class ArrowsFileEditor(
     override fun onReady() = sendLoad()
 
     override fun onGraphChanged(graph: GraphPayload, docVersion: Long?) {
-        val doc = document ?: return
-        // Write the graph back verbatim - preserves style and every top-level
-        // field. (Canonical key ordering would need the bundle to emit it.)
+        // Verbatim write preserves style and every top-level field.
         val nextText = JSONObject(graph.raw).toString(2)
-        ApplicationManager.getApplication().invokeLater {
-            if (project.isDisposed || doc.text == nextText) return@invokeLater
-            applyingHostEdit = true
-            try {
-                WriteCommandAction.runWriteCommandAction(project) { doc.setText(nextText) }
-            } finally {
-                applyingHostEdit = false
-            }
-        }
+        ApplicationManager.getApplication().invokeLater { writeGraphText(nextText) }
     }
 
     override fun onResponse(requestId: String, result: String?, error: String?) = requests.resolve(requestId, result, error)
@@ -200,8 +192,10 @@ class ArrowsFileEditor(
             "arrows.exportCypher" -> withCypherClause { export("cypher", JSONObject().put("keyword", it), "cypher", "Cypher") }
             "arrows.copyCypher" -> withCypherClause { copyCypher(it) }
             "arrows.openSource" -> showJson()
-            // Need shared graph logic (layout/patch/validator) the JVM host can't run yet.
-            "arrows.validate", "arrows.format", "arrows.renameLabel", "arrows.renameRelType" -> notifyUnsupported(name)
+            "arrows.validate" -> runValidate()
+            "arrows.format" -> runFormat()
+            "arrows.renameLabel" -> runRename("label")
+            "arrows.renameRelType" -> runRename("relType")
             else -> thisLogger().warn("arrows: unhandled embed command '$name'")
         }
     }
@@ -216,14 +210,10 @@ class ArrowsFileEditor(
         }
     }
 
-    private fun copyCypher(clause: String) {
-        requestFromEmbed("cypher", JSONObject().put("keyword", clause)).whenComplete { result, err ->
-            ApplicationManager.getApplication().invokeLater {
-                if (err != null || result == null) thisLogger().warn("arrows copy Cypher failed: ${err?.message ?: "no result"}")
-                else CopyPasteManager.getInstance().setContents(StringSelection(result))
-            }
+    private fun copyCypher(clause: String) =
+        requestThen("cypher", JSONObject().put("keyword", clause), "copy Cypher") {
+            CopyPasteManager.getInstance().setContents(StringSelection(it))
         }
-    }
 
     private fun showJson() {
         ApplicationManager.getApplication().invokeLater {
@@ -231,12 +221,77 @@ class ArrowsFileEditor(
         }
     }
 
-    private fun notifyUnsupported(name: String) {
-        ApplicationManager.getApplication().invokeLater {
-            NotificationGroupManager.getInstance().getNotificationGroup("Arrows")
-                .createNotification("\"$name\" is not available in the IntelliJ plugin yet.", NotificationType.INFORMATION)
-                .notify(project)
+    // validate/format/rename run shared graph-logic inside the embed (over the
+    // request channel), since the JVM can't run it directly. The host gathers
+    // input natively, sends the graph, and applies the result.
+
+    private fun currentGraph(): JSONObject? {
+        val text = document?.text ?: return null
+        return try { JSONObject(text) } catch (e: JSONException) { null }
+    }
+
+    private fun writeGraphText(text: String) {
+        val doc = document ?: return
+        if (project.isDisposed || doc.text == text) return
+        applyingHostEdit = true
+        try {
+            WriteCommandAction.runWriteCommandAction(project) { doc.setText(text) }
+        } finally {
+            applyingHostEdit = false
         }
+    }
+
+    private fun notify(message: String) {
+        NotificationGroupManager.getInstance().getNotificationGroup("Arrows")
+            .createNotification(message, NotificationType.INFORMATION).notify(project)
+    }
+
+    private fun runValidate() = ApplicationManager.getApplication().invokeLater {
+        val graph = currentGraph() ?: return@invokeLater
+        requestThen("validate", JSONObject().put("graph", graph), "validate") { result ->
+            val diags = JSONArray(result)
+            notify(
+                if (diags.length() == 0) "Arrows: no issues found."
+                else "Arrows: ${diags.length()} issue(s): " +
+                    (0 until diags.length()).joinToString("; ") { diags.getJSONObject(it).optString("message") }
+            )
+        }
+    }
+
+    private fun runFormat() = ApplicationManager.getApplication().invokeLater {
+        // Layout ids mirror LAYOUTS in libs/graph-logic (the JVM host can't import the list).
+        val algorithm = Messages.showEditableChooseDialog(
+            "Layout", "Auto-arrange nodes", null,
+            arrayOf("force", "hierarchical", "radial", "circular", "grid"), "force", null,
+        ) ?: return@invokeLater
+        val graph = currentGraph() ?: return@invokeLater
+        requestThen("layout", JSONObject().put("graph", graph).put("algorithm", algorithm), "layout") { writeGraphText(it) }
+    }
+
+    private fun runRename(target: String) = ApplicationManager.getApplication().invokeLater {
+        val graph = currentGraph() ?: return@invokeLater
+        val names = collectNames(graph, target)
+        if (names.isEmpty()) { notify("Arrows: no ${if (target == "label") "labels" else "relationship types"} to rename."); return@invokeLater }
+        val from = Messages.showEditableChooseDialog("Rename which?", "Rename", null, names.toTypedArray(), names.first(), null) ?: return@invokeLater
+        val to = Messages.showInputDialog(project, "New name for \"$from\"", "Rename", null, from, null)?.takeIf { it.isNotBlank() } ?: return@invokeLater
+        val op = JSONObject().put("type", if (target == "label") "renameLabel" else "renameRelType")
+        if (target == "label") op.put("oldLabel", from).put("newLabel", to) else op.put("oldType", from).put("newType", to)
+        requestThen("rename", JSONObject().put("graph", graph).put("op", op), "rename") { writeGraphText(it) }
+    }
+
+    private fun collectNames(graph: JSONObject, target: String): List<String> {
+        val out = sortedSetOf<String>()
+        if (target == "label") {
+            val nodes = graph.optJSONArray("nodes") ?: return emptyList()
+            for (i in 0 until nodes.length()) {
+                val labels = nodes.getJSONObject(i).optJSONArray("labels") ?: continue
+                for (j in 0 until labels.length()) out.add(labels.getString(j))
+            }
+        } else {
+            val rels = graph.optJSONArray("relationships") ?: return emptyList()
+            for (i in 0 until rels.length()) rels.getJSONObject(i).optString("type").takeIf { it.isNotEmpty() }?.let(out::add)
+        }
+        return out.toList()
     }
 
     override fun onOpenExternal(url: String) {
