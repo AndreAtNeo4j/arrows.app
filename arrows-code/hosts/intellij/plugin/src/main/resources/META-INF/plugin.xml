@@ -3,10 +3,19 @@
     <name>Arrows</name>
     <vendor url="https://neo4j.com/labs/arrows">Neo4j Labs</vendor>
     <description><![CDATA[
-        Edit Neo4j graph models visually. Open a <code>.arrows</code> file and the arrows.app canvas
-        opens right in the IDE — drag nodes, draw relationships, edit inline — while the underlying
-        JSON stays in sync, so your models live in git next to the code that uses them.
-        Export to Cypher, SVG, or GraphQL, or open the graph in arrows.app.
+        <p>The arrows.app canvas, inside your JetBrains IDE. Open a <code>.arrows</code> file and you get
+        the editor from arrows.app — drag nodes, draw relationships, edit inline. The file stays plain
+        JSON, so your graph models can live in git next to the code that uses them.</p>
+        <p><b>Features</b></p>
+        <ul>
+          <li>Canvas editor for <code>.arrows</code> files</li>
+          <li>Cypher export (copy or save), SVG export, and GraphQL-schema export</li>
+          <li>Open the current graph in arrows.app, or import one from an arrows.app share link</li>
+          <li>Project-wide rename for labels and relationship types</li>
+          <li>Sidebar with your workspace's <code>.arrows</code> files plus six bundled examples</li>
+        </ul>
+        <p>Plain JSON, the same format arrows.app and the VS Code extension use — the file opens
+        interchangeably and diffs cleanly in git.</p>
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
