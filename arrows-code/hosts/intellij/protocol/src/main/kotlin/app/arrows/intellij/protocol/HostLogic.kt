@@ -35,10 +35,8 @@ val GENERATED_DIRS = setOf(
 
 fun isGeneratedPath(path: String): Boolean = path.split('/').any { it in GENERATED_DIRS }
 
-// Cypher export clause picker (mirrors the VS Code cypherClause.ts).
+// Cypher export clause choices (mirrors the VS Code cypherClause.ts).
 val CYPHER_CLAUSES = listOf("CREATE", "MATCH", "MERGE")
-
-fun defaultCypherClause(last: String?): String = if (last in CYPHER_CLAUSES) last!! else "CREATE"
 
 // Embed scheme handler: map a request URL to a classpath resource path (or null
 // to 404) and its MIME type. The '..' guard blocks path traversal out of /embed.

@@ -6,7 +6,6 @@ import app.arrows.intellij.protocol.HostActions
 import app.arrows.intellij.protocol.RequestTracker
 import app.arrows.intellij.protocol.CYPHER_CLAUSES
 import app.arrows.intellij.protocol.arrowsAppImportUrl
-import app.arrows.intellij.protocol.defaultCypherClause
 import app.arrows.intellij.protocol.dispatchInbound
 import app.arrows.intellij.protocol.isAllowedExternalUrl
 import app.arrows.intellij.protocol.parseCommandMenu
@@ -209,7 +208,7 @@ class ArrowsFileEditor(
         ApplicationManager.getApplication().invokeLater {
             val clause = Messages.showEditableChooseDialog(
                 "Cypher clause", "Cypher", null,
-                CYPHER_CLAUSES.toTypedArray(), defaultCypherClause(null), null,
+                CYPHER_CLAUSES.toTypedArray(), CYPHER_CLAUSES.first(), null,
             ) ?: return@invokeLater
             then(clause)
         }

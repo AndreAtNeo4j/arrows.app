@@ -62,14 +62,6 @@ class HostLogicTest {
         assertEquals(listOf("CREATE", "MATCH", "MERGE"), CYPHER_CLAUSES)
     }
 
-    @Test
-    fun defaultsToCreateUnlessLastIsAValidClause() {
-        assertEquals("CREATE", defaultCypherClause(null))
-        assertEquals("CREATE", defaultCypherClause("junk"))
-        assertEquals("MATCH", defaultCypherClause("MATCH"))
-        assertEquals("MERGE", defaultCypherClause("MERGE"))
-    }
-
     // Embed scheme handler resource resolution
     @Test
     fun resolvesEmbedResourcePaths() {
