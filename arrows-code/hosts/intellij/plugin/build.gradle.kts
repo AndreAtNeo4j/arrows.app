@@ -41,3 +41,17 @@ tasks.processResources {
         from(embedBundle) { into("embed") }
     }
 }
+
+// Guard against packaging a blank plugin: buildPlugin must ship the real canvas,
+// not the placeholder. (The placeholder bug was invisible because nothing checked.)
+val verifyEmbedBundle by tasks.registering {
+    doLast {
+        if (!embedBundle.exists()) {
+            throw GradleException(
+                "Embed bundle missing at $embedBundle. Build it first (cd ../vscode && npm run build); " +
+                    "otherwise the packaged plugin ships a blank placeholder."
+            )
+        }
+    }
+}
+tasks.named("buildPlugin") { dependsOn(verifyEmbedBundle) }

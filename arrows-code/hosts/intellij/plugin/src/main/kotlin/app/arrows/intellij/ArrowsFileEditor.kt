@@ -1,12 +1,16 @@
 package app.arrows.intellij
 
+import app.arrows.intellij.protocol.ARROWS_COMMANDS
 import app.arrows.intellij.protocol.GraphPayload
 import app.arrows.intellij.protocol.HostActions
+import app.arrows.intellij.protocol.RequestTracker
 import app.arrows.intellij.protocol.dispatchInbound
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.diagnostic.thisLogger
+import com.intellij.openapi.fileChooser.FileChooserFactory
+import com.intellij.openapi.fileChooser.FileSaverDescriptor
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
@@ -29,6 +33,8 @@ import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import java.beans.PropertyChangeListener
+import java.net.URLEncoder
+import java.util.Base64
 import javax.swing.JComponent
 import javax.swing.JLabel
 
@@ -46,6 +52,8 @@ class ArrowsFileEditor(
     private val browser: JBCefBrowser? = if (JBCefApp.isSupported()) JBCefBrowser() else null
     private val jsQuery: JBCefJSQuery? = browser?.let { JBCefJSQuery.create(it as JBCefBrowserBase) }
     private val fallback = JLabel("JCEF is unavailable in this IDE runtime; cannot render the arrows canvas.")
+
+    private val requests = RequestTracker()
 
     @Volatile private var applyingHostEdit = false
 
@@ -91,8 +99,54 @@ class ArrowsFileEditor(
                 .put("type", "load")
                 .put("graph", graph)
                 .put("docVersion", doc.modificationStamp)
-                .put("menu", JSONArray())
+                .put("menu", menuPayload())
             browser?.cefBrowser?.executeJavaScript("window.postMessage($message, '*');", EMBED_URL, 0)
+        }
+    }
+
+    private fun menuPayload(): JSONArray {
+        val arr = JSONArray()
+        ARROWS_COMMANDS.forEach {
+            arr.put(
+                JSONObject()
+                    .put("id", it.id)
+                    .put("title", it.title)
+                    .put("description", it.description)
+                    .put("icon", it.icon)
+            )
+        }
+        return arr
+    }
+
+    private fun requestFromEmbed(kind: String, payload: JSONObject?): java.util.concurrent.CompletableFuture<String> {
+        val (id, future) = requests.create(kind)
+        val msg = JSONObject().put("type", "request").put("kind", kind).put("requestId", id)
+        if (payload != null) msg.put("payload", payload)
+        browser?.cefBrowser?.executeJavaScript("window.postMessage($msg, '*');", EMBED_URL, 0)
+        return future
+    }
+
+    private fun export(kind: String, payload: JSONObject?, ext: String, label: String) {
+        requestFromEmbed(kind, payload).whenComplete { result, err ->
+            ApplicationManager.getApplication().invokeLater {
+                if (err != null || result == null) {
+                    thisLogger().warn("arrows $label export failed: ${err?.message ?: "no result"}")
+                    return@invokeLater
+                }
+                val descriptor = FileSaverDescriptor("Save $label", "", ext)
+                val wrapper = FileChooserFactory.getInstance()
+                    .createSaveFileDialog(descriptor, project)
+                    .save(file.parent, "${file.nameWithoutExtension}.$ext") ?: return@invokeLater
+                wrapper.file.writeText(result)
+            }
+        }
+    }
+
+    private fun openInArrowsApp() {
+        ApplicationManager.getApplication().invokeLater {
+            val text = document?.text ?: return@invokeLater
+            val b64 = Base64.getEncoder().encodeToString(text.toByteArray())
+            BrowserUtil.browse("https://arrows.app/#/import/json=" + URLEncoder.encode(b64, "UTF-8"))
         }
     }
 
@@ -114,8 +168,17 @@ class ArrowsFileEditor(
         }
     }
 
-    override fun onResponse(requestId: String, result: String?, error: String?) {} // no outbound requests issued yet
-    override fun onCommand(name: String) = thisLogger().warn("arrows: unhandled embed command '$name'")
+    override fun onResponse(requestId: String, result: String?, error: String?) = requests.resolve(requestId, result, error)
+
+    override fun onCommand(name: String) {
+        when (name) {
+            "arrows.openInArrowsApp" -> openInArrowsApp()
+            "arrows.exportSvg" -> export("svg", null, "svg", "SVG")
+            "arrows.exportCypher" -> export("cypher", JSONObject().put("keyword", "CREATE"), "cypher", "Cypher")
+            else -> thisLogger().warn("arrows: unhandled embed command '$name'")
+        }
+    }
+
     override fun onOpenExternal(url: String) = BrowserUtil.browse(url)
     override fun onEmbedError(message: String?, error: String?) =
         thisLogger().warn("arrows embed error: ${message.orEmpty()} ${error.orEmpty()}".trim())
