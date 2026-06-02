@@ -17,6 +17,11 @@ class HostLogicTest {
     }
 
     @Test
+    fun tutorialUrlIsAllowed() {
+        assertTrue(isAllowedExternalUrl(TUTORIAL_URL))
+    }
+
+    @Test
     fun rejectsNonHttpsUnknownHostCredsOrJunk() {
         assertFalse(isAllowedExternalUrl("http://neo4j.com"))            // not https
         assertFalse(isAllowedExternalUrl("https://evil.example.com"))    // unknown host

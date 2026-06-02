@@ -19,6 +19,9 @@ fun isAllowedExternalUrl(url: String): Boolean {
     return uri.scheme == "https" && uri.userInfo == null && uri.host in ALLOWED_EXTERNAL_HOSTS
 }
 
+// "Watch tutorial" target (mirrors VS Code's TUTORIAL_URL in commands/file.ts).
+const val TUTORIAL_URL = "https://www.youtube.com/watch?v=ZHJ-BrKJ8A4"
+
 /** open-in-arrows.app: base64 the graph JSON into an arrows.app import link. */
 fun arrowsAppImportUrl(graphJson: String): String {
     val b64 = Base64.getEncoder().encodeToString(graphJson.toByteArray())

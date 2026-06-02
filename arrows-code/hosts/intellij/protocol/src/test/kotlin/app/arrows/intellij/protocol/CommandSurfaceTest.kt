@@ -39,4 +39,18 @@ class CommandSurfaceTest {
             parseCommandMenu(json).map { it.id },
         )
     }
+
+    // The kebab advertises only commands the JVM host can service: the four that
+    // need graph-logic (validate/format/renameLabel/renameRelType) are dropped.
+    @Test
+    fun supportedEmbedMenuDropsCommandsTheHostCannotRun() {
+        val json = javaClass.getResourceAsStream("/commands.json")!!.bufferedReader().use { it.readText() }
+        assertEquals(
+            listOf(
+                "arrows.openSource", "arrows.copyCypher", "arrows.exportCypher",
+                "arrows.exportSvg", "arrows.exportGraphQL", "arrows.openInArrowsApp",
+            ),
+            supportedEmbedMenu(parseCommandMenu(json)).map { it.id },
+        )
+    }
 }

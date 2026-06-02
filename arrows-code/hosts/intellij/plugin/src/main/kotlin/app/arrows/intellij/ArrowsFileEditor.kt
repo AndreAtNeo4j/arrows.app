@@ -10,9 +10,9 @@ import app.arrows.intellij.protocol.defaultCypherClause
 import app.arrows.intellij.protocol.dispatchInbound
 import app.arrows.intellij.protocol.isAllowedExternalUrl
 import app.arrows.intellij.protocol.parseCommandMenu
+import app.arrows.intellij.protocol.supportedEmbedMenu
+import app.arrows.intellij.protocol.TUTORIAL_URL
 import com.intellij.ide.BrowserUtil
-import com.intellij.notification.NotificationGroupManager
-import com.intellij.notification.NotificationType
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.diagnostic.thisLogger
@@ -118,7 +118,7 @@ class ArrowsFileEditor(
     private fun loadCommandMenu(): List<CommandEntry> {
         val json = javaClass.getResourceAsStream("/commands.json")
             ?.bufferedReader()?.use { it.readText() } ?: return emptyList()
-        return parseCommandMenu(json)
+        return supportedEmbedMenu(parseCommandMenu(json))
     }
 
     private fun menuPayload(): JSONArray {
@@ -189,13 +189,12 @@ class ArrowsFileEditor(
     override fun onCommand(name: String) {
         when (name) {
             "arrows.openInArrowsApp" -> openInArrowsApp()
+            "arrows.openTutorial" -> onOpenExternal(TUTORIAL_URL)
             "arrows.exportSvg" -> export("svg", null, "svg", "SVG")
             "arrows.exportGraphQL" -> export("graphql", null, "graphql", "GraphQL")
             "arrows.exportCypher" -> withCypherClause { export("cypher", JSONObject().put("keyword", it), "cypher", "Cypher") }
             "arrows.copyCypher" -> withCypherClause { copyCypher(it) }
             "arrows.openSource" -> showJson()
-            // Need shared graph logic (layout/patch/validator) the JVM host can't run yet.
-            "arrows.validate", "arrows.format", "arrows.renameLabel", "arrows.renameRelType" -> notifyUnsupported(name)
             else -> thisLogger().warn("arrows: unhandled embed command '$name'")
         }
     }
@@ -223,14 +222,6 @@ class ArrowsFileEditor(
     private fun showJson() {
         ApplicationManager.getApplication().invokeLater {
             FileEditorManager.getInstance(project).openTextEditor(OpenFileDescriptor(project, file), true)
-        }
-    }
-
-    private fun notifyUnsupported(name: String) {
-        ApplicationManager.getApplication().invokeLater {
-            NotificationGroupManager.getInstance().getNotificationGroup("Arrows")
-                .createNotification("\"$name\" is not available in the IntelliJ plugin yet.", NotificationType.INFORMATION)
-                .notify(project)
         }
     }
 

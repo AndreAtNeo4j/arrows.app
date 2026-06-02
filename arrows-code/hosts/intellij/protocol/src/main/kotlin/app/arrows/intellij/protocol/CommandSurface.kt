@@ -29,3 +29,17 @@ fun parseCommandMenu(json: String): List<CommandEntry> {
     }
     return result
 }
+
+// validate/format/renameLabel/renameRelType need graph-logic the JVM host can't
+// run, so the IntelliJ kebab advertises only what it can service.
+val SUPPORTED_EMBED_COMMANDS = setOf(
+    "arrows.openSource",
+    "arrows.copyCypher",
+    "arrows.exportCypher",
+    "arrows.exportSvg",
+    "arrows.exportGraphQL",
+    "arrows.openInArrowsApp",
+)
+
+fun supportedEmbedMenu(entries: List<CommandEntry>): List<CommandEntry> =
+    entries.filter { it.id in SUPPORTED_EMBED_COMMANDS }
