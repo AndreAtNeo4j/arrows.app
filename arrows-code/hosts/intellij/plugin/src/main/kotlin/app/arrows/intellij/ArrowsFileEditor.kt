@@ -27,8 +27,6 @@ import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorState
-import com.intellij.openapi.fileEditor.ex.FileEditorManagerEx
-import com.intellij.openapi.fileEditor.impl.EditorWindow
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.project.Project
@@ -51,7 +49,6 @@ import java.beans.PropertyChangeListener
 import java.util.concurrent.CompletableFuture
 import javax.swing.JComponent
 import javax.swing.JLabel
-import javax.swing.SwingConstants
 
 // The arrows canvas in a JCEF editor tab. Transport only — feature logic lives in the embed bundle.
 class ArrowsFileEditor(
@@ -201,7 +198,6 @@ class ArrowsFileEditor(
             "arrows.exportGraphQL" -> export("graphql", null, "graphql", "GraphQL")
             "arrows.exportCypher" -> withCypherClause { export("cypher", JSONObject().put("keyword", it), "cypher", "Cypher") }
             "arrows.copyCypher" -> withCypherClause { copyCypher(it) }
-            "arrows.openSource" -> showJson()
             "arrows.renameLabel" -> renameIn("Rename Label", "label", ::labelsInGraph, ::renameLabelInGraph)
             "arrows.renameRelType" -> renameIn("Rename Relationship Type", "relationship type", ::relTypesInGraph, ::renameRelTypeInGraph)
             else -> thisLogger().warn("arrows: unhandled embed command '$name'")
@@ -258,28 +254,6 @@ class ArrowsFileEditor(
         }
     }
 
-    private fun showJson() {
-        ApplicationManager.getApplication().invokeLater {
-            if (project.isDisposed) return@invokeLater
-            val source = FileEditorManagerEx.getInstanceEx(project).currentWindow ?: return@invokeLater
-            // Canvas stays here; open JSON in the split beside it.
-            val split = source.split(SwingConstants.VERTICAL, true, file, false) ?: return@invokeLater
-            selectJsonWhenLoaded(split, attempts = JSON_SPLIT_POLL_ATTEMPTS)
-        }
-    }
-
-    // The split's EditorComposite loads its editors async; poll until the text view appears.
-    private fun selectJsonWhenLoaded(window: EditorWindow, attempts: Int) {
-        if (project.isDisposed) return
-        val composite = window.getComposite(file)
-        val textProvider = composite?.allProviders?.firstOrNull { it !is ArrowsFileEditorProvider }
-        when {
-            textProvider != null -> composite.setSelectedEditor(textProvider.editorTypeId)
-            attempts > 0 -> ApplicationManager.getApplication().invokeLater { selectJsonWhenLoaded(window, attempts - 1) }
-            else -> thisLogger().warn("arrows showJson: text editor never loaded (providers=${composite?.allProviders?.map { it.editorTypeId }})")
-        }
-    }
-
     override fun onOpenExternal(url: String) {
         if (isAllowedExternalUrl(url)) BrowserUtil.browse(url)
         else thisLogger().warn("arrows: refusing to open external url: $url")
@@ -303,7 +277,6 @@ class ArrowsFileEditor(
     }
 
     private companion object {
-        private const val JSON_SPLIT_POLL_ATTEMPTS = 40
         @Volatile private var schemeRegistered = false
 
         fun registerSchemeHandler() {

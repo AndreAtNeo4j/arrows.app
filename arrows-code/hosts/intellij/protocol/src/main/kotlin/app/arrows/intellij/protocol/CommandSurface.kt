@@ -14,9 +14,10 @@ fun parseCommandMenu(json: String): List<CommandEntry> {
         .map { CommandEntry(it.getString("id"), it.getString("title"), it.optString("description"), it.optString("icon")) }
 }
 
-// validate/format need graph-logic the JVM host can't run; rename is a plain JSON edit.
+// validate/format need graph-logic the JVM host can't run; openSource needs a 2nd editor on the
+// file (NPE + per-file "open as JSON" drift), so it's dropped. rename is a plain JSON edit.
 val SUPPORTED_EMBED_COMMANDS = setOf(
-    "arrows.openSource", "arrows.copyCypher", "arrows.exportCypher", "arrows.exportSvg",
+    "arrows.copyCypher", "arrows.exportCypher", "arrows.exportSvg",
     "arrows.exportGraphQL", "arrows.openInArrowsApp", "arrows.renameLabel", "arrows.renameRelType",
 )
 

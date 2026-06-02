@@ -40,15 +40,15 @@ class CommandSurfaceTest {
         )
     }
 
-    // The kebab advertises only commands the JVM host can service: validate and
-    // format (graph-logic) are dropped; rename is a plain JSON edit and kept.
+    // The kebab advertises only commands the JVM host can service: validate/format
+    // (graph-logic) and openSource (needs a 2nd editor) are dropped; rename is kept.
     @Test
     fun supportedEmbedMenuDropsCommandsTheHostCannotRun() {
         val json = javaClass.getResourceAsStream("/commands.json")!!.bufferedReader().use { it.readText() }
         assertEquals(
             listOf(
-                "arrows.openSource", "arrows.copyCypher", "arrows.exportCypher",
-                "arrows.exportSvg", "arrows.exportGraphQL", "arrows.openInArrowsApp",
+                "arrows.copyCypher", "arrows.exportCypher", "arrows.exportSvg",
+                "arrows.exportGraphQL", "arrows.openInArrowsApp",
                 "arrows.renameLabel", "arrows.renameRelType",
             ),
             supportedEmbedMenu(parseCommandMenu(json)).map { it.id },

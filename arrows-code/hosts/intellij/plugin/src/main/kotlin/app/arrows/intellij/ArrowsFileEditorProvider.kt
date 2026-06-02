@@ -15,6 +15,7 @@ class ArrowsFileEditorProvider : FileEditorProvider, DumbAware {
 
     override fun getEditorTypeId(): String = "arrows.canvas"
 
-    // Canvas is the default view; the text editor stays available for "Show JSON".
-    override fun getPolicy(): FileEditorPolicy = FileEditorPolicy.PLACE_BEFORE_DEFAULT_EDITOR
+    // Canvas only. A second (text) editor makes a 2-editor composite, which makes IntelliJ
+    // remember "open as JSON" per file and trips a platform NPE on close (providerSelected !!).
+    override fun getPolicy(): FileEditorPolicy = FileEditorPolicy.HIDE_DEFAULT_EDITOR
 }

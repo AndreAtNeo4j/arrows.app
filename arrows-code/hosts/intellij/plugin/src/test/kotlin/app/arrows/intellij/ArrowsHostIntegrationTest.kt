@@ -19,8 +19,8 @@ class ArrowsHostIntegrationTest : BasePlatformTestCase() {
         assertFalse(provider.accept(project, text))
     }
 
-    fun testProviderPlacesCanvasBeforeTextEditor() {
-        assertEquals(FileEditorPolicy.PLACE_BEFORE_DEFAULT_EDITOR, provider.policy)
+    fun testProviderHidesDefaultEditor() {
+        assertEquals(FileEditorPolicy.HIDE_DEFAULT_EDITOR, provider.policy)
         assertEquals("arrows.canvas", provider.editorTypeId)
     }
 

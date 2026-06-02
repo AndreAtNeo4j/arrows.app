@@ -11,9 +11,10 @@ nx/TypeScript build.
   lib, so it validates the same shapes). Run `./gradlew :protocol:test`.
 - **`plugin/`** — JCEF `FileEditor` for `*.arrows` with the postMessage bridge
   and two-way Document sync. Sidebar (new/example/import), the kebab commands
-  (show JSON, copy/save Cypher, save SVG/GraphQL, open in arrows.app, rename
-  label/rel type), and the export round-trip are wired. validate and
-  auto-arrange are not — they need graph-logic the JVM host can't run.
+  (copy/save Cypher, save SVG/GraphQL, open in arrows.app, rename label/rel
+  type), and the export round-trip are wired. validate and auto-arrange need
+  graph-logic the JVM host can't run; show-JSON-side-by-side is dropped (a 2nd
+  editor on the file trips a platform NPE and makes files reopen as JSON).
 
 ## Tests
 
