@@ -223,20 +223,16 @@ class ArrowsFileEditor(
     }
 
     private fun showJson() {
-        val app = ApplicationManager.getApplication()
-        app.invokeLater {
+        ApplicationManager.getApplication().invokeLater {
             if (project.isDisposed) return@invokeLater
-            val window = FileEditorManagerEx.getInstanceEx(project).currentWindow ?: return@invokeLater
-            val split = window.split(SwingConstants.VERTICAL, true, file, true) ?: return@invokeLater
-            // split shows the canvas; flip the new pane to the text view (the non-canvas provider).
-            // Editors load async, so select once the split has settled.
-            app.invokeLater {
-                if (project.isDisposed) return@invokeLater
-                val composite = split.getComposite(file) ?: return@invokeLater
-                val textProvider = composite.allProviders.firstOrNull { it !is ArrowsFileEditorProvider }
-                if (textProvider != null) composite.setSelectedEditor(textProvider.editorTypeId)
-                else thisLogger().warn("arrows showJson: no text editor (providers=${composite.allProviders.map { it.editorTypeId }})")
-            }
+            val source = FileEditorManagerEx.getInstanceEx(project).currentWindow ?: return@invokeLater
+            // Split the canvas off, then flip THIS pane to JSON. Flip the source pane (already
+            // loaded) — the new split's editors load async and aren't queryable yet.
+            source.split(SwingConstants.VERTICAL, true, file, true)
+            val composite = source.getComposite(file) ?: return@invokeLater
+            val textProvider = composite.allProviders.firstOrNull { it !is ArrowsFileEditorProvider }
+            if (textProvider != null) composite.setSelectedEditor(textProvider.editorTypeId)
+            else thisLogger().warn("arrows showJson: no text editor (providers=${composite.allProviders.map { it.editorTypeId }})")
         }
     }
 
