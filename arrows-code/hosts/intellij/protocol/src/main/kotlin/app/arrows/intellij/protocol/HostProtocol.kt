@@ -3,7 +3,10 @@ package app.arrows.intellij.protocol
 import org.json.JSONException
 import org.json.JSONObject
 
-data class GraphPayload(val nodes: List<Any?>, val relationships: List<Any?>)
+data class GraphPayload(val raw: Map<String, Any?>) {
+    val nodes: List<Any?> get() = raw["nodes"] as? List<Any?> ?: emptyList()
+    val relationships: List<Any?> get() = raw["relationships"] as? List<Any?> ?: emptyList()
+}
 
 sealed interface InboundMessage {
     data object Ready : InboundMessage
@@ -29,10 +32,9 @@ fun parseInboundMessage(raw: String): InboundMessage? {
 
         "graph-changed" -> {
             val graph = obj.optJSONObject("graph") ?: return null
-            val nodes = graph.optJSONArray("nodes") ?: return null
-            val relationships = graph.optJSONArray("relationships") ?: return null
+            if (graph.optJSONArray("nodes") == null || graph.optJSONArray("relationships") == null) return null
             val docVersion = if (obj.opt("docVersion") is Number) obj.getInt("docVersion") else null
-            InboundMessage.GraphChanged(GraphPayload(nodes.toList(), relationships.toList()), docVersion)
+            InboundMessage.GraphChanged(GraphPayload(graph.toMap()), docVersion)
         }
 
         "response" -> {

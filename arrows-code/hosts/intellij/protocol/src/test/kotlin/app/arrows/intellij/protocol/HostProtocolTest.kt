@@ -21,7 +21,10 @@ class HostProtocolTest {
     @Test
     fun parsesGraphChangedWithDocVersion() {
         assertEquals(
-            InboundMessage.GraphChanged(GraphPayload(emptyList(), emptyList()), 7),
+            InboundMessage.GraphChanged(
+                GraphPayload(mapOf("nodes" to emptyList<Any?>(), "relationships" to emptyList<Any?>())),
+                7
+            ),
             parseInboundMessage("""{"type":"graph-changed","graph":{"nodes":[],"relationships":[]},"docVersion":7}""")
         )
     }
@@ -29,9 +32,19 @@ class HostProtocolTest {
     @Test
     fun parsesGraphChangedWithoutDocVersion() {
         assertEquals(
-            InboundMessage.GraphChanged(GraphPayload(listOf(mapOf("id" to "n0")), emptyList()), null),
+            InboundMessage.GraphChanged(
+                GraphPayload(mapOf("nodes" to listOf(mapOf("id" to "n0")), "relationships" to emptyList<Any?>())),
+                null
+            ),
             parseInboundMessage("""{"type":"graph-changed","graph":{"nodes":[{"id":"n0"}],"relationships":[]}}""")
         )
+    }
+
+    @Test
+    fun graphChangedPreservesNonNodeFieldsLikeStyle() {
+        val msg = parseInboundMessage("""{"type":"graph-changed","graph":{"nodes":[],"relationships":[],"style":{"node-color":"#fff"}}}""")
+        val graph = (msg as InboundMessage.GraphChanged).graph
+        assertEquals(mapOf("node-color" to "#fff"), graph.raw["style"])
     }
 
     @Test
@@ -44,7 +57,10 @@ class HostProtocolTest {
     @Test
     fun ignoresNonNumericDocVersion() {
         assertEquals(
-            InboundMessage.GraphChanged(GraphPayload(emptyList(), emptyList()), null),
+            InboundMessage.GraphChanged(
+                GraphPayload(mapOf("nodes" to emptyList<Any?>(), "relationships" to emptyList<Any?>())),
+                null
+            ),
             parseInboundMessage("""{"type":"graph-changed","graph":{"nodes":[],"relationships":[]},"docVersion":"nope"}""")
         )
     }

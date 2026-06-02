@@ -6,6 +6,12 @@
 
     <depends>com.intellij.modules.platform</depends>
 
-    <!-- Extensions (fileEditorProvider, toolWindow, actions) land with the JCEF
-         glue, which needs the IntelliJ Platform SDK to compile. -->
+    <extensions defaultExtensionNs="com.intellij">
+        <fileType
+            name="Arrows"
+            implementationClass="app.arrows.intellij.ArrowsFileType"
+            fieldName="INSTANCE"
+            extensions="arrows"/>
+        <fileEditorProvider implementation="app.arrows.intellij.ArrowsFileEditorProvider"/>
+    </extensions>
 </idea-plugin>
