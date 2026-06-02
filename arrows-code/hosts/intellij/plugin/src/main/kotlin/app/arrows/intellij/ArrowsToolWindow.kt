@@ -9,12 +9,15 @@ import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.roots.ProjectFileIndex
 import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.SimpleToolWindowPanel
 import com.intellij.openapi.vfs.VfsUtil
-import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.VirtualFileManager
+import com.intellij.openapi.vfs.newvfs.BulkFileListener
+import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.ui.ColoredTreeCellRenderer
@@ -27,13 +30,6 @@ import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.DefaultTreeModel
 import javax.swing.tree.TreeSelectionModel
 
-private const val NEW_GRAPH_TEMPLATE = """{
-  "nodes": [],
-  "relationships": [],
-  "style": {}
-}
-"""
-
 // Bundled under plugin resources /examples/ (copied from fixtures/examples at build time).
 private val EXAMPLE_NAMES = listOf(
     "citations", "iam-rbac", "lexical-graph", "microservices", "order-lifecycle", "social",
@@ -44,6 +40,15 @@ class ArrowsToolWindowFactory : ToolWindowFactory, DumbAware {
         val panel = ArrowsToolWindowPanel(project)
         toolWindow.contentManager.addContent(
             com.intellij.ui.content.ContentFactory.getInstance().createContent(panel, "", false)
+        )
+        // Auto-refresh on .arrows create/delete, like the VS Code file watcher.
+        project.messageBus.connect(toolWindow.disposable).subscribe(
+            VirtualFileManager.VFS_CHANGES,
+            object : BulkFileListener {
+                override fun after(events: List<VFileEvent>) {
+                    if (events.any { it.path.endsWith(".arrows") }) panel.refresh()
+                }
+            },
         )
     }
 }
@@ -73,16 +78,16 @@ private class ArrowsToolWindowPanel(private val project: Project) : SimpleToolWi
 
         val actions = DefaultActionGroup().apply {
             add(simpleAction("New Graph", AllIcons.General.Add) { newGraph() })
-            add(simpleAction("Refresh", AllIcons.Actions.Refresh) { rebuild() })
+            add(simpleAction("Refresh", AllIcons.Actions.Refresh) { refresh() })
         }
         val bar = ActionManager.getInstance().createActionToolbar("ArrowsSidebar", actions, true)
         bar.targetComponent = tree
         toolbar = bar.component
         setContent(JBScrollPane(tree))
-        rebuild()
+        refresh()
     }
 
-    private fun rebuild() {
+    fun refresh() {
         root.removeAllChildren()
         root.add(section("Quick actions", listOf(
             Node.Action("New graph") { newGraph() },
@@ -118,8 +123,12 @@ private class ArrowsToolWindowPanel(private val project: Project) : SimpleToolWi
     private fun newGraph() {
         val dir = ProjectRootManager.getInstance(project).contentRoots.firstOrNull() ?: return
         val name = promptFileName("graph.arrows") ?: return
-        writeAndOpen(dir, name, NEW_GRAPH_TEMPLATE)
+        writeAndOpen(dir, name, newGraphTemplate())
     }
+
+    private fun newGraphTemplate(): String =
+        javaClass.getResourceAsStream("/new-graph.json")?.bufferedReader()?.use { it.readText() }
+            ?: """{"nodes":[],"relationships":[],"style":{}}"""
 
     private fun newFromExample() {
         val choice = Messages.showEditableChooseDialog(
@@ -150,7 +159,7 @@ private class ArrowsToolWindowPanel(private val project: Project) : SimpleToolWi
             if (existing == null) VfsUtil.saveText(file, content)
             FileEditorManager.getInstance(project).openFile(file, true)
         }
-        rebuild()
+        refresh()
     }
 
     private fun simpleAction(text: String, icon: javax.swing.Icon, run: () -> Unit) =
@@ -175,11 +184,19 @@ private class ArrowsCellRenderer : ColoredTreeCellRenderer() {
     }
 }
 
+// Generated/output trees that hold copies of .arrows files. iterateContent
+// already skips folders IntelliJ marks excluded; this also covers build dirs a
+// plainly-opened project hasn't marked, so a file shows once (its source copy).
+private val GENERATED_DIRS = setOf(
+    "node_modules", "build", "dist", "out", "target", ".gradle", ".idea", ".vscode-test", "coverage", "media",
+)
+
 private fun workspaceArrowsFiles(project: Project): List<VirtualFile> {
-    val root = ProjectRootManager.getInstance(project).contentRoots.firstOrNull() ?: return emptyList()
     val result = mutableListOf<VirtualFile>()
-    VfsUtilCore.iterateChildrenRecursively(root, { it.name != "node_modules" && it.name != "build" && it.name != "dist" }) { vf ->
-        if (!vf.isDirectory && vf.extension == "arrows") result.add(vf)
+    ProjectFileIndex.getInstance(project).iterateContent { vf ->
+        if (!vf.isDirectory && vf.extension == "arrows" && vf.path.split('/').none { it in GENERATED_DIRS }) {
+            result.add(vf)
+        }
         true
     }
     return result.sortedBy { it.path }

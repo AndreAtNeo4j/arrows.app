@@ -40,10 +40,17 @@ import org.json.JSONException
 import org.json.JSONObject
 import java.awt.datatransfer.StringSelection
 import java.beans.PropertyChangeListener
+import java.net.URI
 import java.net.URLEncoder
 import java.util.Base64
 import javax.swing.JComponent
 import javax.swing.JLabel
+
+// Same host allowlist as the VS Code host (commands/file.ts). Small + stable;
+// if it grows, promote to a shared config like commands.json.
+private val ALLOWED_EXTERNAL_HOSTS = setOf(
+    "neo4j.com", "feedback.neo4j.com", "www.youtube.com", "youtube.com", "github.com",
+)
 
 /**
  * The arrows canvas in an editor tab. Loads the shared embed bundle in JCEF and
@@ -221,7 +228,15 @@ class ArrowsFileEditor(
         }
     }
 
-    override fun onOpenExternal(url: String) = BrowserUtil.browse(url)
+    override fun onOpenExternal(url: String) {
+        // Mirror the VS Code host allowlist: https only, no creds, known hosts.
+        val uri = try { URI(url) } catch (_: Exception) { null }
+        if (uri?.scheme == "https" && uri.userInfo == null && uri.host in ALLOWED_EXTERNAL_HOSTS) {
+            BrowserUtil.browse(url)
+        } else {
+            thisLogger().warn("arrows: refusing to open external url: $url")
+        }
+    }
     override fun onEmbedError(message: String?, error: String?) =
         thisLogger().warn("arrows embed error: ${message.orEmpty()} ${error.orEmpty()}".trim())
 

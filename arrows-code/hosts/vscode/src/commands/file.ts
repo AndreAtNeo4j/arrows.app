@@ -2,27 +2,12 @@ import * as vscode from 'vscode';
 import { readdirSync } from 'node:fs';
 import { sep } from 'node:path';
 import { readGraph, writeGraph } from '@arrows-code/format-json';
+import { NEW_GRAPH_TEMPLATE } from '@arrows-code/host-protocol';
 import { parseImportInput } from '../parseImportInput';
 import { examplesDir, msg, resolveDocument, toUri, workspaceTargetUri } from './helpers';
 
-const TEMPLATE = `{
-  "style": {
-    "font-family": "sans-serif",
-    "background-color": "#ffffff",
-    "node-color": "#ffe081"
-  },
-  "nodes": [
-    { "id": "n0", "position": { "x": 0,   "y": 0   }, "caption": "Alice", "labels": ["Person"], "properties": { "name": "'Alice'", "age": "30" }, "style": {} },
-    { "id": "n1", "position": { "x": 360, "y": 0   }, "caption": "Bob",   "labels": ["Person"], "properties": { "name": "'Bob'",   "age": "32" }, "style": {} },
-    { "id": "n2", "position": { "x": 180, "y": 320 }, "caption": "Hello World", "labels": ["Post"], "properties": { "title": "'Hello World'", "createdAt": "$now" }, "style": {} }
-  ],
-  "relationships": [
-    { "id": "r0", "fromId": "n0", "toId": "n1", "type": "KNOWS",    "properties": { "since": "$today" }, "style": {} },
-    { "id": "r1", "fromId": "n0", "toId": "n2", "type": "AUTHORED", "properties": {}, "style": {} },
-    { "id": "r2", "fromId": "n1", "toId": "n2", "type": "LIKED",    "properties": {}, "style": {} }
-  ]
-}
-`;
+// Shared starter graph (host-protocol/new-graph.json) so both hosts seed the same content.
+const TEMPLATE = `${JSON.stringify(NEW_GRAPH_TEMPLATE, null, 2)}\n`;
 
 // Focuses the editor group; plain openWith from a tree click leaves focus on the tree.
 export async function openFile(uri: vscode.Uri): Promise<void> {
