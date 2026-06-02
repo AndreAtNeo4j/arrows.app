@@ -6,13 +6,24 @@ Subsystem brings arrows.app into VS Code. Self-contained under `arrows-code/`; d
 
 ```
 arrows-code/
-├── apps/
-│   └── vscode-arrows/   VS Code extension. layout/, patch/, validator/ live under src/
-│                        (inlined - they have no second consumer)
-├── libs/
-│   └── format-json/     read/write canonical .arrows JSON
-└── fixtures/examples/   bundled .arrows examples shown in sidebar
+├── hosts/                editor-specific adapters (one dir per editor)
+│   ├── vscode/           VS Code extension (only VS-Code-coupled code)
+│   └── intellij/         IntelliJ/JCEF plugin (planned, Kotlin/Gradle)
+├── libs/                 host-agnostic, no editor SDK
+│   ├── format-json/      read/write canonical .arrows JSON
+│   ├── graph-logic/      layout + patch + validation algorithms
+│   └── host-protocol/    embed↔host wire contract + parseInboundMessage
+└── fixtures/examples/    bundled .arrows examples shown in sidebar
 ```
+
+**Separation rule.** `hosts/*` is editor-specific and may import that editor's
+SDK. `libs/*` is host-agnostic and must never import an editor SDK. If logic is
+shared, it goes in a lib — not inlined in a host.
+
+**Cross-language caveat.** A Kotlin host (IntelliJ) cannot import the TypeScript
+libs. The libs de-duplicate logic among TypeScript hosts; the two things both
+hosts genuinely share are the **web bundle** and the **protocol contract**.
+Logic that must be single-source across languages belongs in the bundle.
 
 Only allowed imports from the host repo: `@neo4j-arrows/{model,graphics,selectors}`. Never `apps/arrows-ts/**`.
 
@@ -21,10 +32,10 @@ Only allowed imports from the host repo: `@neo4j-arrows/{model,graphics,selector
 ```bash
 npx nx test arrows-code-validator               # one project
 npx nx run-many -t test --projects=arrows-code-* # all
-cd arrows-code/apps/vscode-arrows && npm run install:local  # build + install (then Reload Window in VS Code)
-cd arrows-code/apps/vscode-arrows && npm run build        # build only (no install)
-cd arrows-code/apps/vscode-arrows && npm run commands-test  # real VS Code Electron host
-cd arrows-code/apps/vscode-arrows && npm run package      # build .vsix
+cd arrows-code/hosts/vscode && npm run install:local  # build + install (then Reload Window in VS Code)
+cd arrows-code/hosts/vscode && npm run build        # build only (no install)
+cd arrows-code/hosts/vscode && npm run commands-test  # real VS Code Electron host
+cd arrows-code/hosts/vscode && npm run package      # build .vsix
 ```
 
 ## Comment policy
@@ -56,7 +67,7 @@ The VS Code extension does **not** have its own copy of the graph canvas, render
 
 - All canvas logic lives in `apps/arrows-ts/src/` (shared with the web app).
 - The embed-specific files are only in `apps/arrows-ts/src/embed/`: the postMessage bridge (`bridge.ts`), the entry point (`main.tsx`), and the thin toolbar overlay (`EmbedToolbar.tsx`, `EmbedActionMenu.tsx`, `EmbedFooter.tsx`).
-- **To change any canvas behaviour**, edit `apps/arrows-ts/src/` as you would for the web app, then rebuild: `cd arrows-code/apps/vscode-arrows && npm run build`.
+- **To change any canvas behaviour**, edit `apps/arrows-ts/src/` as you would for the web app, then rebuild: `cd arrows-code/hosts/vscode && npm run build`.
 
 Never duplicate canvas or renderer code into `arrows-code/`. If something only works in one surface, the split belongs in `embed/`.
 

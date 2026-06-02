@@ -9,7 +9,7 @@ Three layers, run in order from fastest to slowest.
 npx nx test arrows-code-format-json
 
 # Extension src
-cd arrows-code/apps/vscode-arrows && npm test
+cd arrows-code/hosts/vscode && npm test
 ```
 
 Covers: graph read/write round-trips, layout algorithms, patch ops, structural validation, webview request/response envelope, command catalog, Cypher clause picker, import-URL parser.
@@ -19,7 +19,7 @@ Covers: graph read/write round-trips, layout algorithms, patch ops, structural v
 Boots a real VS Code Electron host and asserts the extension activates and every contributed command resolves.
 
 ```bash
-cd arrows-code/apps/vscode-arrows && npm run commands-test
+cd arrows-code/hosts/vscode && npm run commands-test
 ```
 
 Run this before packaging - it catches activation-event regressions that unit tests can't see.
@@ -29,13 +29,13 @@ Run this before packaging - it catches activation-event regressions that unit te
 Drives the embed bundle in a real browser against the arrows-ts dev server (port 4200). Asserts the postMessage protocol over canvas interactions.
 
 ```bash
-cd arrows-code/apps/vscode-arrows && npm run e2e
+cd arrows-code/hosts/vscode && npm run e2e
 ```
 
 ## 4. Manual sanity check inside VS Code
 
 ```bash
-cd arrows-code/apps/vscode-arrows && npm run install:local
+cd arrows-code/hosts/vscode && npm run install:local
 ```
 
 Then in VS Code: `Cmd+Shift+P → Developer: Reload Window`.

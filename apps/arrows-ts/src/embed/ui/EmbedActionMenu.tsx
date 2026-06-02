@@ -23,7 +23,7 @@ const SCROLL_CSS = `
 
 // Reads menu entries the host posted into `window.__arrowsMenu` and renders
 // the kebab dropdown. Single source of truth is
-// arrows-code/apps/vscode-arrows/src/commandsCatalog.ts.
+// arrows-code/hosts/vscode/src/commandsCatalog.ts.
 
 const readMenu = (): EmbedMenuEntry[] =>
   (embedWindow().__arrowsMenu as EmbedMenuEntry[] | undefined) ?? [];

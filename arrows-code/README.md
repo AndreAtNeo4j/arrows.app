@@ -8,24 +8,26 @@ Self-contained subsystem inside the `arrows.app` monorepo. Deleting `arrows-code
 
 ```text
 arrows-code/
-├── apps/
-│   └── vscode-arrows/        VS Code extension
-│       └── src/
-│           ├── PreviewProvider.ts   CustomTextEditorProvider + host↔webview bridge
-│           ├── extension.ts         activate() - wires commands, sidebar, custom editor
-│           ├── sidebar.ts           TreeDataProvider: quick actions, workspace .arrows, examples
-│           ├── webviewHtml.ts       embed.html → webview-safe HTML (CSP, nonces, asWebviewUri)
-│           ├── webviewRequest.ts    request/response envelope over postMessage
-│           ├── commands/            command implementations (file, export, format, validate, rename)
-│           ├── commandsCatalog.ts   single source of truth for command surface
-│           ├── layout/              5 layout algorithms (force / hierarchical / radial / circular / grid)
-│           ├── patch/               PatchOp types + pure apply()
-│           ├── validator/           structural + style-key validation
-│           └── parseImportInput.ts  arrows.app share URL / raw JSON parser
-├── libs/
-│   └── format-json/         read/write canonical .arrows JSON, deterministic output
-└── fixtures/examples/       .arrows files copied into media/examples/ at build time
+├── hosts/                       editor-specific adapters (one dir per editor)
+│   ├── vscode/                  VS Code extension — only VS-Code-coupled code
+│   │   └── src/
+│   │       ├── PreviewProvider.ts   CustomTextEditorProvider + host↔webview bridge
+│   │       ├── extension.ts         activate() - wires commands, sidebar, custom editor
+│   │       ├── sidebar.ts           TreeDataProvider: quick actions, workspace .arrows, examples
+│   │       ├── webviewHtml.ts       embed.html → webview-safe HTML (CSP, nonces, asWebviewUri)
+│   │       ├── webviewRequest.ts    request/response envelope over postMessage
+│   │       ├── commands/            command implementations (file, export, format, validate, rename)
+│   │       ├── commandsCatalog.ts   single source of truth for command surface
+│   │       └── parseImportInput.ts  arrows.app share URL / raw JSON parser
+│   └── intellij/                IntelliJ/JCEF plugin (planned, Kotlin/Gradle)
+├── libs/                        host-agnostic — no editor SDK
+│   ├── format-json/             read/write canonical .arrows JSON, deterministic output
+│   ├── graph-logic/             layout (5 algorithms) + patch ops + structural validation
+│   └── host-protocol/           embed↔host wire contract + parseInboundMessage
+└── fixtures/examples/           .arrows files copied into media/embed examples at build time
 ```
+
+`hosts/*` is editor-specific (may import the editor SDK); `libs/*` is host-agnostic (never imports one). Shared logic lives in a lib, not inlined in a host.
 
 The canvas, renderer, and inspector are **not** here - they live in `apps/arrows-ts/src/` and ship as a Vite bundle into `media/embed/` (gitignored). See `CLAUDE.md` for the shared-canvas rule.
 
@@ -66,9 +68,9 @@ What the extension defines **on top of** the bundle (does NOT auto-update from a
 
 The web app's brand strings (`https://neo4j.com/labs/arrows`, "Powered by Neo4j Labs", the Neo4j logo SVG) live inside `Footer.jsx`'s JSX - not exported as constants. The extension references them in three places that would need manual update if rebranded:
 
-- `arrows-code/apps/vscode-arrows/src/commands/file.ts` - `TUTORIAL_URL`, `ALLOWED_HOSTS` allowlist
-- `arrows-code/apps/vscode-arrows/src/commands/export.ts` - `https://arrows.app/#/import/json=` URL construction for `openInArrowsApp`
-- `arrows-code/apps/vscode-arrows/src/commands/file.ts` - `arrows.app` prompt text for `importGraph`
+- `arrows-code/hosts/vscode/src/commands/file.ts` - `TUTORIAL_URL`, `ALLOWED_HOSTS` allowlist
+- `arrows-code/hosts/vscode/src/commands/export.ts` - `https://arrows.app/#/import/json=` URL construction for `openInArrowsApp`
+- `arrows-code/hosts/vscode/src/commands/file.ts` - `arrows.app` prompt text for `importGraph`
 
 ## Decoupling rules
 
@@ -85,19 +87,19 @@ Forbidden: any path under `apps/arrows-ts/**`. The embed is consumed as a built 
 ```bash
 # Unit tests (vitest) for the one library + the extension src
 npx nx test arrows-code-format-json
-cd arrows-code/apps/vscode-arrows && npm test
+cd arrows-code/hosts/vscode && npm test
 
 # Build the embed bundle + extension bundle
-cd arrows-code/apps/vscode-arrows && npm run build
+cd arrows-code/hosts/vscode && npm run build
 
 # Real VS Code Electron smoke test (commands resolve, extension activates)
-cd arrows-code/apps/vscode-arrows && npm run commands-test
+cd arrows-code/hosts/vscode && npm run commands-test
 
 # Package .vsix (runs build + test + commands-test)
-cd arrows-code/apps/vscode-arrows && npm run package
+cd arrows-code/hosts/vscode && npm run package
 
 # Build + install locally (then Reload Window in VS Code)
-cd arrows-code/apps/vscode-arrows && npm run install:local
+cd arrows-code/hosts/vscode && npm run install:local
 ```
 
 ## Architecture invariants

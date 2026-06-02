@@ -1,0 +1,11 @@
+<idea-plugin>
+    <id>app.arrows.intellij</id>
+    <name>Arrows</name>
+    <vendor url="https://neo4j.com/labs/arrows">Neo4j Labs</vendor>
+    <description>Edit Neo4j graph models visually in .arrows files, the JVM counterpart to the VS Code extension.</description>
+
+    <depends>com.intellij.modules.platform</depends>
+
+    <!-- Extensions (fileEditorProvider, toolWindow, actions) land with the JCEF
+         glue, which needs the IntelliJ Platform SDK to compile. -->
+</idea-plugin>

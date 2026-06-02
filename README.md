@@ -32,7 +32,7 @@ To chat directly with the developers about contributing code, join us over on [N
 
 ## Arrows for VS Code
 
-A VS Code extension lives under [`arrows-code/`](arrows-code/) and embeds the same canvas inside `.arrows` file tabs with two-way sync to the underlying JSON. It reuses the web app via a Vite embed entry rather than duplicating any canvas code. See [`arrows-code/README.md`](arrows-code/README.md) for build and install instructions, and [`arrows-code/apps/vscode-arrows/README.md`](arrows-code/apps/vscode-arrows/README.md) for end-user docs.
+A VS Code extension lives under [`arrows-code/`](arrows-code/) and embeds the same canvas inside `.arrows` file tabs with two-way sync to the underlying JSON. It reuses the web app via a Vite embed entry rather than duplicating any canvas code. See [`arrows-code/README.md`](arrows-code/README.md) for build and install instructions, and [`arrows-code/hosts/vscode/README.md`](arrows-code/hosts/vscode/README.md) for end-user docs.
 
 ---
 
