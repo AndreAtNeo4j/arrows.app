@@ -2,7 +2,12 @@
     <id>app.arrows.intellij</id>
     <name>Arrows</name>
     <vendor url="https://neo4j.com/labs/arrows">Neo4j Labs</vendor>
-    <description>Edit Neo4j graph models visually in .arrows files, the JVM counterpart to the VS Code extension.</description>
+    <description><![CDATA[
+        Edit Neo4j graph models visually. Open a <code>.arrows</code> file and the arrows.app canvas
+        opens right in the IDE — drag nodes, draw relationships, edit inline — while the underlying
+        JSON stays in sync, so your models live in git next to the code that uses them.
+        Export to Cypher, SVG, or GraphQL, or open the graph in arrows.app.
+    ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
 

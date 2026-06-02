@@ -1,8 +1,10 @@
 # arrows-code
 
-VS Code extension that brings arrows.app into the developer's text editor.
+Brings the arrows.app canvas into developer IDEs — a **VS Code extension** and an **IntelliJ Platform plugin** — both embedding the same web bundle over the same host protocol.
 
 Self-contained subsystem inside the `arrows.app` monorepo. Deleting `arrows-code/` removes it cleanly - the parent web app is untouched.
+
+This README documents the VS Code host; the IntelliJ host is a thin Kotlin/JCEF adapter — see [hosts/intellij/README.md](hosts/intellij/README.md).
 
 ## Layout
 
@@ -19,7 +21,7 @@ arrows-code/
 │   │       ├── commands/            command implementations (file, export, format, validate, rename)
 │   │       ├── commandsCatalog.ts   single source of truth for command surface
 │   │       └── parseImportInput.ts  arrows.app share URL / raw JSON parser
-│   └── intellij/                IntelliJ/JCEF plugin (planned, Kotlin/Gradle)
+│   └── intellij/                IntelliJ plugin — JCEF canvas, Kotlin/Gradle
 ├── libs/                        host-agnostic — no editor SDK
 │   ├── format-json/             read/write canonical .arrows JSON, deterministic output
 │   ├── graph-logic/             layout (5 algorithms) + patch ops + structural validation
