@@ -177,8 +177,8 @@ private class ArrowsCellRenderer : ColoredTreeCellRenderer() {
         when (val node = (value as? DefaultMutableTreeNode)?.userObject) {
             is Node.Section -> { icon = AllIcons.Nodes.Folder; append(node.label, SimpleTextAttributes.REGULAR_BOLD_ATTRIBUTES) }
             is Node.Action -> { icon = AllIcons.General.Add; append(node.label) }
-            is Node.FileEntry -> { icon = AllIcons.FileTypes.Json; append(node.file.name) }
-            is Node.Example -> { icon = AllIcons.Nodes.PpLib; append(node.name); append("  bundled", SimpleTextAttributes.GRAYED_ATTRIBUTES) }
+            is Node.FileEntry -> { icon = ArrowsFileType.icon; append(node.file.name) }
+            is Node.Example -> { icon = ArrowsFileType.icon; append(node.name); append("  bundled", SimpleTextAttributes.GRAYED_ATTRIBUTES) }
             is Node.Empty -> { icon = AllIcons.General.Information; append(node.label, SimpleTextAttributes.GRAYED_ATTRIBUTES) }
             else -> {}
         }
