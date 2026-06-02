@@ -23,9 +23,9 @@ import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditor
-import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorState
-import com.intellij.openapi.fileEditor.OpenFileDescriptor
+import com.intellij.openapi.fileEditor.ex.FileEditorManagerEx
+import com.intellij.openapi.fileEditor.impl.text.TextEditorProvider
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.project.Project
@@ -47,6 +47,7 @@ import java.awt.datatransfer.StringSelection
 import java.beans.PropertyChangeListener
 import javax.swing.JComponent
 import javax.swing.JLabel
+import javax.swing.SwingConstants
 
 /**
  * The arrows canvas in an editor tab. Loads the shared embed bundle in JCEF and
@@ -225,7 +226,11 @@ class ArrowsFileEditor(
 
     private fun showJson() {
         ApplicationManager.getApplication().invokeLater {
-            FileEditorManager.getInstance(project).openTextEditor(OpenFileDescriptor(project, file), true)
+            if (project.isDisposed) return@invokeLater
+            val manager = FileEditorManagerEx.getInstanceEx(project)
+            val window = manager.currentWindow ?: return@invokeLater
+            window.split(SwingConstants.VERTICAL, true, file, true)
+            manager.setSelectedEditor(file, TextEditorProvider.getInstance().editorTypeId)
         }
     }
 
