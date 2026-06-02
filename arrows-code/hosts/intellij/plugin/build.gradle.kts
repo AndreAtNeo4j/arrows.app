@@ -45,6 +45,7 @@ tasks.processResources {
     from(sharedMedia) { include("sidebar-icon.svg"); into("icons"); rename { "arrows.svg" } }
     from(sharedMedia) { include("file-icon.svg"); into("META-INF"); rename { "pluginIcon.svg" } }
     from(examples) { include("*.arrows"); into("examples") }
+    from(rootProject.file("../../libs/host-protocol/src/lib")) { include("commands.json") }
 }
 
 // Guard against packaging a blank plugin: buildPlugin must ship the real canvas,

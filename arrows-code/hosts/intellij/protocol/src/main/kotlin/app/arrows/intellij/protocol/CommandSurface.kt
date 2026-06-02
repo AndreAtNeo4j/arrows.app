@@ -1,11 +1,31 @@
 package app.arrows.intellij.protocol
 
-/** A kebab-menu command the embed offers and the host executes. `icon` is a codicon name rendered as text by the embed. */
+import org.json.JSONArray
+import org.json.JSONException
+
+/** A kebab-menu command. `icon` is a codicon name the embed renders as text. */
 data class CommandEntry(val id: String, val title: String, val description: String, val icon: String)
 
-/** Commands the IntelliJ host actually implements (sent as the embed `menu`). Grows as more are wired. */
-val ARROWS_COMMANDS: List<CommandEntry> = listOf(
-    CommandEntry("arrows.openInArrowsApp", "Open in arrows.app", "Open this graph in arrows.app", "link-external"),
-    CommandEntry("arrows.exportSvg", "Save as SVG…", "Save the canvas as an SVG file", "file-media"),
-    CommandEntry("arrows.exportCypher", "Save as Cypher…", "Save the graph as a .cypher file", "database"),
-)
+/**
+ * Parse the shared command catalog (host-protocol/commands.json) and keep the
+ * embed-menu entries. One source for both hosts, so their kebabs can't diverge.
+ */
+fun parseCommandMenu(json: String): List<CommandEntry> {
+    val arr = try { JSONArray(json) } catch (_: JSONException) { return emptyList() }
+    val result = mutableListOf<CommandEntry>()
+    for (i in 0 until arr.length()) {
+        val o = arr.optJSONObject(i) ?: continue
+        val embedMenu = o.optJSONObject("surface")?.optBoolean("embedMenu") == true
+        if (o.optBoolean("webview") && embedMenu) {
+            result.add(
+                CommandEntry(
+                    o.getString("id"),
+                    o.getString("title"),
+                    o.optString("description"),
+                    o.optString("icon"),
+                )
+            )
+        }
+    }
+    return result
+}

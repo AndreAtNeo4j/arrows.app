@@ -1,11 +1,14 @@
 package app.arrows.intellij
 
-import app.arrows.intellij.protocol.ARROWS_COMMANDS
+import app.arrows.intellij.protocol.CommandEntry
 import app.arrows.intellij.protocol.GraphPayload
 import app.arrows.intellij.protocol.HostActions
 import app.arrows.intellij.protocol.RequestTracker
 import app.arrows.intellij.protocol.dispatchInbound
+import app.arrows.intellij.protocol.parseCommandMenu
 import com.intellij.ide.BrowserUtil
+import com.intellij.notification.NotificationGroupManager
+import com.intellij.notification.NotificationType
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.diagnostic.thisLogger
@@ -16,7 +19,10 @@ import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditor
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorState
+import com.intellij.openapi.fileEditor.OpenFileDescriptor
+import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.UserDataHolderBase
@@ -32,6 +38,7 @@ import org.cef.handler.CefLoadHandlerAdapter
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
+import java.awt.datatransfer.StringSelection
 import java.beans.PropertyChangeListener
 import java.net.URLEncoder
 import java.util.Base64
@@ -54,6 +61,7 @@ class ArrowsFileEditor(
     private val fallback = JLabel("JCEF is unavailable in this IDE runtime; cannot render the arrows canvas.")
 
     private val requests = RequestTracker()
+    private val commandMenu: List<CommandEntry> = loadCommandMenu()
 
     @Volatile private var applyingHostEdit = false
 
@@ -104,9 +112,15 @@ class ArrowsFileEditor(
         }
     }
 
+    private fun loadCommandMenu(): List<CommandEntry> {
+        val json = javaClass.getResourceAsStream("/commands.json")
+            ?.bufferedReader()?.use { it.readText() } ?: return emptyList()
+        return parseCommandMenu(json)
+    }
+
     private fun menuPayload(): JSONArray {
         val arr = JSONArray()
-        ARROWS_COMMANDS.forEach {
+        commandMenu.forEach {
             arr.put(
                 JSONObject()
                     .put("id", it.id)
@@ -175,7 +189,35 @@ class ArrowsFileEditor(
             "arrows.openInArrowsApp" -> openInArrowsApp()
             "arrows.exportSvg" -> export("svg", null, "svg", "SVG")
             "arrows.exportCypher" -> export("cypher", JSONObject().put("keyword", "CREATE"), "cypher", "Cypher")
+            "arrows.exportGraphQL" -> export("graphql", null, "graphql", "GraphQL")
+            "arrows.copyCypher" -> copyCypher()
+            "arrows.openSource" -> showJson()
+            // Need shared graph logic (layout/patch/validator) the JVM host can't run yet.
+            "arrows.validate", "arrows.format", "arrows.renameLabel", "arrows.renameRelType" -> notifyUnsupported(name)
             else -> thisLogger().warn("arrows: unhandled embed command '$name'")
+        }
+    }
+
+    private fun copyCypher() {
+        requestFromEmbed("cypher", JSONObject().put("keyword", "CREATE")).whenComplete { result, err ->
+            ApplicationManager.getApplication().invokeLater {
+                if (err != null || result == null) thisLogger().warn("arrows copy Cypher failed: ${err?.message ?: "no result"}")
+                else CopyPasteManager.getInstance().setContents(StringSelection(result))
+            }
+        }
+    }
+
+    private fun showJson() {
+        ApplicationManager.getApplication().invokeLater {
+            FileEditorManager.getInstance(project).openTextEditor(OpenFileDescriptor(project, file), true)
+        }
+    }
+
+    private fun notifyUnsupported(name: String) {
+        ApplicationManager.getApplication().invokeLater {
+            NotificationGroupManager.getInstance().getNotificationGroup("Arrows")
+                .createNotification("\"$name\" is not available in the IntelliJ plugin yet.", NotificationType.INFORMATION)
+                .notify(project)
         }
     }
 
