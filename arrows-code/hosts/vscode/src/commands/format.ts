@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { readGraph, writeGraph } from '@arrows-code/format-json';
-import { LAYOUTS, findLayout, type LayoutId } from '@neo4j-arrows/graph-logic';
+import { LAYOUTS, findLayout, type LayoutId } from '@arrows-code/graph-logic';
 import { replaceDocumentText, resolveDocument } from './helpers';
 
 const LAST_LAYOUT_KEY = 'arrows.lastLayoutId';

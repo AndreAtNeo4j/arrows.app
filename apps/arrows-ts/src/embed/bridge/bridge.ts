@@ -1,5 +1,5 @@
 import { Point, completeWithDefaults } from '@neo4j-arrows/model';
-import { requestHandlers, type RequestKind } from './bridgeRender';
+import { renderers, type RenderKind } from './bridgeRender';
 import { shouldEmit } from './shouldEmit';
 import { isUserBusy } from './userBusy';
 import { embedWindow } from './hostPost';
@@ -202,22 +202,22 @@ export function initBridge(
     }
     if (m.type === 'request' && typeof m.requestId === 'string') {
       const { kind, requestId, payload } = m as {
-        kind?: RequestKind;
+        kind?: RenderKind;
         requestId: string;
         payload?: unknown;
       };
       const reply = (body: { result?: string; error?: string }): void => {
         host.post({ type: 'response', kind, requestId, ...body });
       };
-      const handler = kind ? requestHandlers[kind] : undefined;
-      if (!handler) {
+      const renderer = kind ? renderers[kind] : undefined;
+      if (!renderer) {
         reply({ error: `Unknown request kind: ${kind}` });
         return;
       }
       // .then-chain catches both sync throws (via the initial Promise.resolve)
-      // and async rejections from the handler.
+      // and async rejections from the renderer.
       Promise.resolve()
-        .then(() => handler(store.getState(), payload))
+        .then(() => renderer(store.getState(), payload))
         .then((result) => reply({ result }))
         .catch((err: unknown) => {
           reply({ error: err instanceof Error ? err.message : String(err) });

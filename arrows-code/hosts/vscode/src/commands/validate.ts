@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { readGraph } from '@arrows-code/format-json';
-import { validate as validateGraph } from '@neo4j-arrows/graph-logic';
+import { validate as validateGraph } from '@arrows-code/graph-logic';
 import { resolveDocument } from './helpers';
 
 const SEVERITY: Record<string, vscode.DiagnosticSeverity> = {

@@ -400,55 +400,6 @@ describe('bridge - export request handlers (svg / graphql / cypher)', () => {
   });
 });
 
-describe('bridge - graph-op request handlers (validate / layout / rename)', () => {
-  const GRAPH = {
-    nodes: [{ id: 'n0', position: { x: 0, y: 0 }, caption: 'A', labels: ['Old'], properties: {}, style: {} }],
-    relationships: [],
-    style: {},
-  };
-
-  // The bridge replies in a microtask (Promise.resolve().then), so poll for it.
-  async function awaitResponse(posts: PostedMessage[]): Promise<PostedMessage> {
-    let response: PostedMessage | undefined;
-    for (let i = 0; i < 50 && !response; i++) {
-      await new Promise((r) => setTimeout(r, 10));
-      response = posts.find((p) => p.type === 'response');
-    }
-    expect(response).toBeDefined();
-    return response as PostedMessage;
-  }
-
-  it('validate → response.result is a JSON diagnostics array', async () => {
-    const { bridge, posts } = setup();
-    posts.length = 0;
-    bridge.receive({ type: 'request', kind: 'validate', requestId: 'v1', payload: { graph: GRAPH } });
-    const response = await awaitResponse(posts);
-    expect(response.requestId).toBe('v1');
-    expect(Array.isArray(JSON.parse(response.result))).toBe(true);
-  });
-
-  it('rename → response.result is the graph with the label renamed', async () => {
-    const { bridge, posts } = setup();
-    posts.length = 0;
-    bridge.receive({
-      type: 'request', kind: 'rename', requestId: 'r1',
-      payload: { graph: GRAPH, op: { type: 'renameLabel', oldLabel: 'Old', newLabel: 'New' } },
-    });
-    const next = JSON.parse((await awaitResponse(posts)).result);
-    expect(next.nodes[0].labels).toContain('New');
-    expect(next.nodes[0].labels).not.toContain('Old');
-  });
-
-  it('layout → response.result is a graph with positioned nodes', async () => {
-    const { bridge, posts } = setup();
-    posts.length = 0;
-    bridge.receive({ type: 'request', kind: 'layout', requestId: 'l1', payload: { graph: GRAPH, algorithm: 'grid' } });
-    const next = JSON.parse((await awaitResponse(posts)).result);
-    expect(next.nodes).toHaveLength(1);
-    expect(next.nodes[0].position).toBeDefined();
-  });
-});
-
 describe('bridge - menu payload', () => {
   it('preserves icon field on inbound menu entries (host → window.__arrowsMenu)', () => {
     const { bridge } = setup();
