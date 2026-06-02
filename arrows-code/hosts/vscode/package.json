@@ -163,7 +163,7 @@
   },
   "dependencies": {
     "@arrows-code/format-json": "*",
-    "@arrows-code/graph-logic": "*",
+    "@neo4j-arrows/graph-logic": "*",
     "@arrows-code/host-protocol": "*",
     "@arrows-code/neo4j-client": "*",
     "neo4j-driver": "^5.8.1"

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { homedir } from 'node:os';
 import { readGraph, writeGraph } from '@arrows-code/format-json';
-import { apply, type PatchOp } from '@arrows-code/graph-logic';
+import { apply, type PatchOp } from '@neo4j-arrows/graph-logic';
 
 export const msg = (e: unknown): string =>
   e instanceof Error ? e.message : String(e);

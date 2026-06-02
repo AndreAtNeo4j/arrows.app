@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import type { Neo4jConfig, SchemaResult } from '@arrows-code/neo4j-client';
 import { readGraph, writeGraph } from '@arrows-code/format-json';
-import { findLayout } from '@arrows-code/graph-logic';
+import { findLayout } from '@neo4j-arrows/graph-logic';
 import { schemaToGraph } from './schemaToGraph';
 import { msg, workspaceTargetUri } from './helpers';
 

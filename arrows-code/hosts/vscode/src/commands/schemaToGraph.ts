@@ -1,5 +1,5 @@
 import type { SchemaResult } from '@arrows-code/neo4j-client';
-import type { GraphIn } from '@arrows-code/graph-logic';
+import type { GraphIn } from '@neo4j-arrows/graph-logic';
 
 function toProps(properties: { name: string; type: string }[]): Record<string, string> {
   return Object.fromEntries(properties.map((p) => [p.name, p.type]));
