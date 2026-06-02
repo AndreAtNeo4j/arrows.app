@@ -22,12 +22,22 @@ kotlin {
     jvmToolchain(21)
 }
 
-// Ship the shared embed bundle if it has been built. Same artifact the VS Code
-// host bundles (dist/apps/arrows-ts); the real bundle overrides the placeholder.
+intellijPlatform {
+    buildSearchableOptions = false // no custom settings UI to index
+    pluginConfiguration {
+        version = "0.1.0"
+        ideaVersion {
+            sinceBuild = "243"
+        }
+    }
+}
+
+// Ship the shared embed bundle if it has been built (dist/apps/arrows-ts, the
+// same artifact the VS Code host bundles). Drop the placeholder when present.
 val embedBundle = rootProject.file("../../../dist/apps/arrows-ts")
 tasks.processResources {
-    duplicatesStrategy = DuplicatesStrategy.INCLUDE
     if (embedBundle.exists()) {
+        exclude("embed/**")
         from(embedBundle) { into("embed") }
     }
 }

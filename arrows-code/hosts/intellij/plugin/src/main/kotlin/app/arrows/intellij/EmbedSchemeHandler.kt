@@ -30,9 +30,12 @@ private class EmbedResourceHandler : CefResourceHandler {
     private var mime: String = "application/octet-stream"
 
     override fun processRequest(request: CefRequest, callback: CefCallback): Boolean {
-        val path = URI(request.url).path.trimStart('/').ifEmpty { "embed.html" }
-        stream = javaClass.getResourceAsStream("/embed/$path")
-        mime = mimeFor(path)
+        // A throw here would propagate into native CEF; a missing/unsafe path -> 404 below.
+        val path = runCatching { URI(request.url).path }.getOrNull()?.trimStart('/')?.ifEmpty { "embed.html" }
+        if (path != null && ".." !in path) {
+            stream = javaClass.getResourceAsStream("/embed/$path")
+            mime = mimeFor(path)
+        }
         callback.Continue()
         return true
     }

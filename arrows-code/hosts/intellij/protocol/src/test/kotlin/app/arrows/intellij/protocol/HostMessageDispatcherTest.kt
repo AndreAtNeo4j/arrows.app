@@ -33,28 +33,28 @@ class HostMessageDispatcherTest {
     @Test
     fun routesResponse() {
         val host = RecordingHost()
-        dispatchInbound("""{"type":"response","requestId":"svg-1","result":"<svg/>"}""", host)
+        assertTrue(dispatchInbound("""{"type":"response","requestId":"svg-1","result":"<svg/>"}""", host))
         assertEquals(listOf("response:svg-1:<svg/>:null"), host.calls)
     }
 
     @Test
     fun routesCommand() {
         val host = RecordingHost()
-        dispatchInbound("""{"type":"command","name":"arrows.validate"}""", host)
+        assertTrue(dispatchInbound("""{"type":"command","name":"arrows.validate"}""", host))
         assertEquals(listOf("command:arrows.validate"), host.calls)
     }
 
     @Test
     fun routesOpenExternal() {
         val host = RecordingHost()
-        dispatchInbound("""{"type":"open-external","url":"https://neo4j.com"}""", host)
+        assertTrue(dispatchInbound("""{"type":"open-external","url":"https://neo4j.com"}""", host))
         assertEquals(listOf("open:https://neo4j.com"), host.calls)
     }
 
     @Test
     fun routesEmbedError() {
         val host = RecordingHost()
-        dispatchInbound("""{"type":"embed-error","message":"boom"}""", host)
+        assertTrue(dispatchInbound("""{"type":"embed-error","message":"boom"}""", host))
         assertEquals(listOf("error:boom:null"), host.calls)
     }
 

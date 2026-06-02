@@ -6,6 +6,7 @@ import app.arrows.intellij.protocol.dispatchInbound
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
@@ -24,6 +25,7 @@ import org.cef.CefApp
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 import org.cef.handler.CefLoadHandlerAdapter
+import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import java.beans.PropertyChangeListener
@@ -70,9 +72,7 @@ class ArrowsFileEditor(
 
     private fun injectBridge() {
         val q = jsQuery ?: return
-        // The embed bridge falls back to window.parent.postMessage (== window in
-        // the top frame). Forward those to the JVM; host->embed 'load'/'request'
-        // messages we post back are ignored by the protocol parser (no loop).
+        // Forward window.postMessage to the JVM; host->embed messages we post back are inert to the inbound parser, so no loop.
         val js = """
             window.__arrowsToHost = function(payload) { ${q.inject("payload")} };
             window.addEventListener('message', function(e) {
@@ -83,13 +83,17 @@ class ArrowsFileEditor(
     }
 
     private fun sendLoad() {
-        val doc = document ?: return
-        val graph = try { JSONObject(doc.text) } catch (e: JSONException) { return }
-        val message = JSONObject()
-            .put("type", "load")
-            .put("graph", graph)
-            .put("docVersion", doc.modificationStamp)
-        browser?.cefBrowser?.executeJavaScript("window.postMessage($message, '*');", EMBED_URL, 0)
+        // JCEF callbacks fire off the EDT; hop to it before reading the Document.
+        ApplicationManager.getApplication().invokeLater {
+            val doc = document ?: return@invokeLater
+            val graph = try { JSONObject(doc.text) } catch (e: JSONException) { return@invokeLater }
+            val message = JSONObject()
+                .put("type", "load")
+                .put("graph", graph)
+                .put("docVersion", doc.modificationStamp)
+                .put("menu", JSONArray())
+            browser?.cefBrowser?.executeJavaScript("window.postMessage($message, '*');", EMBED_URL, 0)
+        }
     }
 
     override fun onReady() = sendLoad()
@@ -100,7 +104,7 @@ class ArrowsFileEditor(
         // field. (Canonical key ordering would need the bundle to emit it.)
         val nextText = JSONObject(graph.raw).toString(2)
         ApplicationManager.getApplication().invokeLater {
-            if (doc.text == nextText) return@invokeLater
+            if (project.isDisposed || doc.text == nextText) return@invokeLater
             applyingHostEdit = true
             try {
                 WriteCommandAction.runWriteCommandAction(project) { doc.setText(nextText) }
@@ -110,10 +114,11 @@ class ArrowsFileEditor(
         }
     }
 
-    override fun onResponse(requestId: String, result: String?, error: String?) {}
-    override fun onCommand(name: String) {}
+    override fun onResponse(requestId: String, result: String?, error: String?) {} // no outbound requests issued yet
+    override fun onCommand(name: String) = thisLogger().warn("arrows: unhandled embed command '$name'")
     override fun onOpenExternal(url: String) = BrowserUtil.browse(url)
-    override fun onEmbedError(message: String?, error: String?) {}
+    override fun onEmbedError(message: String?, error: String?) =
+        thisLogger().warn("arrows embed error: ${message.orEmpty()} ${error.orEmpty()}".trim())
 
     override fun getComponent(): JComponent = browser?.component ?: fallback
     override fun getPreferredFocusedComponent(): JComponent = component

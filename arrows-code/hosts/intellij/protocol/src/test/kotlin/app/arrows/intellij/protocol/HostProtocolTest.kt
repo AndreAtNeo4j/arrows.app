@@ -4,11 +4,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
-/**
- * Mirrors the TypeScript host-protocol contract
- * (arrows-code/libs/host-protocol/src/lib/messages.spec.ts). A Kotlin host
- * cannot import the TS lib, so it must validate the same wire shapes itself.
- */
+/** Mirrors the TS contract spec at arrows-code/libs/host-protocol/src/lib/messages.spec.ts (a Kotlin host can't import the TS lib). */
 class HostProtocolTest {
     @Test
     fun parsesReadyIgnoringExtraFields() {

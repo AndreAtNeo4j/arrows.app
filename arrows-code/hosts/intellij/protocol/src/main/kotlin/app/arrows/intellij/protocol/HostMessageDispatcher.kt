@@ -1,10 +1,6 @@
 package app.arrows.intellij.protocol
 
-/**
- * Host-side reactions to embed -> host messages. The IntelliJ FileEditor
- * implements this against the Document, JCEF browser, and platform services.
- * Mirrors the dispatch the VS Code PreviewProvider does inline.
- */
+/** Host-side reactions to embed -> host messages; the FileEditor implements this against the Document, browser, and platform services. */
 interface HostActions {
     fun onReady()
     fun onGraphChanged(graph: GraphPayload, docVersion: Int?)
