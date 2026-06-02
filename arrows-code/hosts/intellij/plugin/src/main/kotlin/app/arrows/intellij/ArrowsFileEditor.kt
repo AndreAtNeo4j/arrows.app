@@ -24,7 +24,6 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorState
 import com.intellij.openapi.fileEditor.ex.FileEditorManagerEx
-import com.intellij.openapi.fileEditor.impl.text.TextEditorProvider
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.project.Project
@@ -235,12 +234,20 @@ class ArrowsFileEditor(
     }
 
     private fun showJson() {
-        ApplicationManager.getApplication().invokeLater {
+        val app = ApplicationManager.getApplication()
+        app.invokeLater {
             if (project.isDisposed) return@invokeLater
             val window = FileEditorManagerEx.getInstanceEx(project).currentWindow ?: return@invokeLater
             val split = window.split(SwingConstants.VERTICAL, true, file, true) ?: return@invokeLater
-            // split opens the canvas (default view); flip the new pane to the JSON text editor.
-            split.getComposite(file)?.setSelectedEditor(TextEditorProvider.getInstance().editorTypeId)
+            // split shows the canvas; flip the new pane to the text view (the non-canvas provider).
+            // Editors load async, so select once the split has settled.
+            app.invokeLater {
+                if (project.isDisposed) return@invokeLater
+                val composite = split.getComposite(file) ?: return@invokeLater
+                val textProvider = composite.allProviders.firstOrNull { it !is ArrowsFileEditorProvider }
+                if (textProvider != null) composite.setSelectedEditor(textProvider.editorTypeId)
+                else thisLogger().warn("arrows showJson: no text editor (providers=${composite.allProviders.map { it.editorTypeId }})")
+            }
         }
     }
 
