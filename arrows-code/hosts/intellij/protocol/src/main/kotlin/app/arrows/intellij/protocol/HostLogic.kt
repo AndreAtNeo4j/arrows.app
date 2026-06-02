@@ -29,8 +29,7 @@ fun arrowsAppImportUrl(graphJson: String): String {
 // Browsers reject very long URLs; warn past this (mirrors VS Code's ARROWS_APP_URL_WARN_BYTES).
 const val ARROWS_APP_URL_WARN_BYTES = 20_000
 
-// Compact the graph (drop indentation) for a shorter URL; null if it doesn't parse.
-// Boolean = the graph is large enough that some browsers may reject the URL.
+// Compact JSON for a shorter URL; null if unparseable; Boolean = large enough that a browser may reject it.
 fun arrowsAppShare(graphJson: String): Pair<String, Boolean>? {
     val compact = runCatching { JSONObject(graphJson).toString() }.getOrNull() ?: return null
     return arrowsAppImportUrl(compact) to (compact.length > ARROWS_APP_URL_WARN_BYTES)

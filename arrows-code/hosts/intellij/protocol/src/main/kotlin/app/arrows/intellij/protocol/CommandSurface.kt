@@ -3,44 +3,21 @@ package app.arrows.intellij.protocol
 import org.json.JSONArray
 import org.json.JSONException
 
-/** A kebab-menu command. `icon` is a codicon name the embed renders as text. */
+/** A kebab command; `icon` is a codicon name the embed renders. */
 data class CommandEntry(val id: String, val title: String, val description: String, val icon: String)
 
-/**
- * Parse the shared command catalog (host-protocol/commands.json) and keep the
- * embed-menu entries. One source for both hosts, so their kebabs can't diverge.
- */
+// Parsed from the shared commands.json so both hosts render the same kebab.
 fun parseCommandMenu(json: String): List<CommandEntry> {
     val arr = try { JSONArray(json) } catch (_: JSONException) { return emptyList() }
-    val result = mutableListOf<CommandEntry>()
-    for (i in 0 until arr.length()) {
-        val o = arr.optJSONObject(i) ?: continue
-        val embedMenu = o.optJSONObject("surface")?.optBoolean("embedMenu") == true
-        if (o.optBoolean("webview") && embedMenu) {
-            result.add(
-                CommandEntry(
-                    o.getString("id"),
-                    o.getString("title"),
-                    o.optString("description"),
-                    o.optString("icon"),
-                )
-            )
-        }
-    }
-    return result
+    return (0 until arr.length()).mapNotNull { arr.optJSONObject(it) }
+        .filter { it.optBoolean("webview") && it.optJSONObject("surface")?.optBoolean("embedMenu") == true }
+        .map { CommandEntry(it.getString("id"), it.getString("title"), it.optString("description"), it.optString("icon")) }
 }
 
-// validate/format need graph-logic (validator/layout) the JVM host can't run, so
-// the kebab advertises only what it can service. rename is a plain JSON edit.
+// validate/format need graph-logic the JVM host can't run; rename is a plain JSON edit.
 val SUPPORTED_EMBED_COMMANDS = setOf(
-    "arrows.openSource",
-    "arrows.copyCypher",
-    "arrows.exportCypher",
-    "arrows.exportSvg",
-    "arrows.exportGraphQL",
-    "arrows.openInArrowsApp",
-    "arrows.renameLabel",
-    "arrows.renameRelType",
+    "arrows.openSource", "arrows.copyCypher", "arrows.exportCypher", "arrows.exportSvg",
+    "arrows.exportGraphQL", "arrows.openInArrowsApp", "arrows.renameLabel", "arrows.renameRelType",
 )
 
 fun supportedEmbedMenu(entries: List<CommandEntry>): List<CommandEntry> =

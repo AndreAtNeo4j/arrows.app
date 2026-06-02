@@ -48,15 +48,12 @@ import org.json.JSONException
 import org.json.JSONObject
 import java.awt.datatransfer.StringSelection
 import java.beans.PropertyChangeListener
+import java.util.concurrent.CompletableFuture
 import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.SwingConstants
 
-/**
- * The arrows canvas in an editor tab. Loads the shared embed bundle in JCEF and
- * relays the same postMessage protocol the VS Code host uses, parsed by the
- * shared :protocol module. Feature logic lives in the bundle; this is transport.
- */
+// The arrows canvas in a JCEF editor tab. Transport only — feature logic lives in the embed bundle.
 class ArrowsFileEditor(
     private val project: Project,
     private val file: VirtualFile,
@@ -130,21 +127,11 @@ class ArrowsFileEditor(
         return supportedEmbedMenu(parseCommandMenu(json))
     }
 
-    private fun menuPayload(): JSONArray {
-        val arr = JSONArray()
-        commandMenu.forEach {
-            arr.put(
-                JSONObject()
-                    .put("id", it.id)
-                    .put("title", it.title)
-                    .put("description", it.description)
-                    .put("icon", it.icon)
-            )
-        }
-        return arr
-    }
+    private fun menuPayload(): JSONArray = JSONArray(commandMenu.map {
+        JSONObject().put("id", it.id).put("title", it.title).put("description", it.description).put("icon", it.icon)
+    })
 
-    private fun requestFromEmbed(kind: String, payload: JSONObject?): java.util.concurrent.CompletableFuture<String> {
+    private fun requestFromEmbed(kind: String, payload: JSONObject?): CompletableFuture<String> {
         val (id, future) = requests.create(kind)
         val msg = JSONObject().put("type", "request").put("kind", kind).put("requestId", id)
         if (payload != null) msg.put("payload", payload)
@@ -221,7 +208,6 @@ class ArrowsFileEditor(
         }
     }
 
-    // Same clause choice as the VS Code host (cypherClause.ts). Dialog must run on the EDT.
     private fun withCypherClause(then: (String) -> Unit) {
         ApplicationManager.getApplication().invokeLater {
             val clause = Messages.showEditableChooseDialog(

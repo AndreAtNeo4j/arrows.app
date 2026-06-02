@@ -1,6 +1,5 @@
 package app.arrows.intellij.protocol
 
-/** Host-side reactions to embed -> host messages; the FileEditor implements this against the Document, browser, and platform services. */
 interface HostActions {
     fun onReady()
     fun onGraphChanged(graph: GraphPayload, docVersion: Long?)
@@ -10,7 +9,7 @@ interface HostActions {
     fun onEmbedError(message: String?, error: String?)
 }
 
-/** Parse one raw message and route it. Returns false if it wasn't a valid message. */
+// Returns false if the raw payload wasn't a recognized message.
 fun dispatchInbound(raw: String, actions: HostActions): Boolean {
     when (val msg = parseInboundMessage(raw) ?: return false) {
         is InboundMessage.Ready -> actions.onReady()
