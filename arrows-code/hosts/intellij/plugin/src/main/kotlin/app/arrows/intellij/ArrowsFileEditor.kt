@@ -59,7 +59,11 @@ class ArrowsFileEditor(
 ) : UserDataHolderBase(), FileEditor, HostActions {
 
     private val document: Document? = FileDocumentManager.getInstance().getDocument(file)
-    private val browser: JBCefBrowser? = if (JBCefApp.isSupported()) JBCefBrowser() else null
+    // Windowed (native, GPU-composited), not the platform-default OSR: OSR copies
+    // every frame to a bitmap and paints it on the EDT, which makes canvas dragging
+    // laggy on HiDPI.
+    private val browser: JBCefBrowser? =
+        if (JBCefApp.isSupported()) JBCefBrowser.createBuilder().setOffScreenRendering(false).build() else null
     private val jsQuery: JBCefJSQuery? = browser?.let { JBCefJSQuery.create(it as JBCefBrowserBase) }
     private val fallback = JLabel("JCEF is unavailable in this IDE runtime; cannot render the arrows canvas.")
 
