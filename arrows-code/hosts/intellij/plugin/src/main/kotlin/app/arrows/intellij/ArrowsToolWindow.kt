@@ -9,6 +9,7 @@ import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
+import app.arrows.intellij.protocol.isGeneratedPath
 import com.intellij.openapi.roots.ProjectFileIndex
 import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.ui.Messages
@@ -184,17 +185,12 @@ private class ArrowsCellRenderer : ColoredTreeCellRenderer() {
     }
 }
 
-// Generated/output trees that hold copies of .arrows files. iterateContent
-// already skips folders IntelliJ marks excluded; this also covers build dirs a
-// plainly-opened project hasn't marked, so a file shows once (its source copy).
-private val GENERATED_DIRS = setOf(
-    "node_modules", "build", "dist", "out", "target", ".gradle", ".idea", ".vscode-test", "coverage", "media",
-)
-
 private fun workspaceArrowsFiles(project: Project): List<VirtualFile> {
+    // iterateContent already skips IDE-excluded roots; isGeneratedPath also drops
+    // build/output copies a plainly-opened project hasn't marked, so each file shows once.
     val result = mutableListOf<VirtualFile>()
     ProjectFileIndex.getInstance(project).iterateContent { vf ->
-        if (!vf.isDirectory && vf.extension == "arrows" && vf.path.split('/').none { it in GENERATED_DIRS }) {
+        if (!vf.isDirectory && vf.extension == "arrows" && !isGeneratedPath(vf.path)) {
             result.add(vf)
         }
         true

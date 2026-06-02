@@ -7,10 +7,11 @@ import org.cef.callback.CefSchemeHandlerFactory
 import org.cef.handler.CefResourceHandler
 import org.cef.misc.IntRef
 import org.cef.misc.StringRef
+import app.arrows.intellij.protocol.embedMimeType
+import app.arrows.intellij.protocol.embedResourcePath
 import org.cef.network.CefRequest
 import org.cef.network.CefResponse
 import java.io.InputStream
-import java.net.URI
 
 const val EMBED_HOST = "arrows.local"
 const val EMBED_URL = "http://arrows.local/embed.html"
@@ -30,11 +31,10 @@ private class EmbedResourceHandler : CefResourceHandler {
     private var mime: String = "application/octet-stream"
 
     override fun processRequest(request: CefRequest, callback: CefCallback): Boolean {
-        // A throw here would propagate into native CEF; a missing/unsafe path -> 404 below.
-        val path = runCatching { URI(request.url).path }.getOrNull()?.trimStart('/')?.ifEmpty { "embed.html" }
-        if (path != null && ".." !in path) {
-            stream = javaClass.getResourceAsStream("/embed/$path")
-            mime = mimeFor(path)
+        // embedResourcePath returns null for unparseable/traversal URLs -> 404 below.
+        embedResourcePath(request.url)?.let { resource ->
+            stream = javaClass.getResourceAsStream(resource)
+            mime = embedMimeType(resource)
         }
         callback.Continue()
         return true
@@ -69,16 +69,4 @@ private class EmbedResourceHandler : CefResourceHandler {
         stream?.close()
         stream = null
     }
-}
-
-private fun mimeFor(path: String): String = when (path.substringAfterLast('.')) {
-    "html" -> "text/html"
-    "js" -> "text/javascript"
-    "css" -> "text/css"
-    "svg" -> "image/svg+xml"
-    "png" -> "image/png"
-    "ico" -> "image/x-icon"
-    "woff2" -> "font/woff2"
-    "woff" -> "font/woff"
-    else -> "application/octet-stream"
 }

@@ -6,6 +6,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 
 class RequestTrackerTest {
     @Test
@@ -37,5 +38,22 @@ class RequestTrackerTest {
         val (a, _) = tracker.create("svg")
         val (b, _) = tracker.create("svg")
         assertNotEquals(a, b)
+    }
+
+    @Test
+    fun resolvingOneLeavesOthersInFlight() {
+        val tracker = RequestTracker()
+        val (a, fa) = tracker.create("svg")
+        val (_, fb) = tracker.create("cypher")
+        tracker.resolve(a, "done", null)
+        assertEquals("done", fa.get())
+        assertFalse(fb.isDone)
+    }
+
+    @Test
+    fun unansweredRequestTimesOut() {
+        val (_, future) = RequestTracker(timeoutMs = 50).create("svg")
+        assertFailsWith<ExecutionException> { future.get() }
+        assertTrue(future.isCompletedExceptionally)
     }
 }

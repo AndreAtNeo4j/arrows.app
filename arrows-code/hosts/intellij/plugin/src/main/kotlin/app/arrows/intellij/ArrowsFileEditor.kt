@@ -4,7 +4,11 @@ import app.arrows.intellij.protocol.CommandEntry
 import app.arrows.intellij.protocol.GraphPayload
 import app.arrows.intellij.protocol.HostActions
 import app.arrows.intellij.protocol.RequestTracker
+import app.arrows.intellij.protocol.CYPHER_CLAUSES
+import app.arrows.intellij.protocol.arrowsAppImportUrl
+import app.arrows.intellij.protocol.defaultCypherClause
 import app.arrows.intellij.protocol.dispatchInbound
+import app.arrows.intellij.protocol.isAllowedExternalUrl
 import app.arrows.intellij.protocol.parseCommandMenu
 import com.intellij.ide.BrowserUtil
 import com.intellij.notification.NotificationGroupManager
@@ -41,17 +45,8 @@ import org.json.JSONException
 import org.json.JSONObject
 import java.awt.datatransfer.StringSelection
 import java.beans.PropertyChangeListener
-import java.net.URI
-import java.net.URLEncoder
-import java.util.Base64
 import javax.swing.JComponent
 import javax.swing.JLabel
-
-// Same host allowlist as the VS Code host (commands/file.ts). Small + stable;
-// if it grows, promote to a shared config like commands.json.
-private val ALLOWED_EXTERNAL_HOSTS = setOf(
-    "neo4j.com", "feedback.neo4j.com", "www.youtube.com", "youtube.com", "github.com",
-)
 
 /**
  * The arrows canvas in an editor tab. Loads the shared embed bundle in JCEF and
@@ -167,8 +162,7 @@ class ArrowsFileEditor(
     private fun openInArrowsApp() {
         ApplicationManager.getApplication().invokeLater {
             val text = document?.text ?: return@invokeLater
-            val b64 = Base64.getEncoder().encodeToString(text.toByteArray())
-            BrowserUtil.browse("https://arrows.app/#/import/json=" + URLEncoder.encode(b64, "UTF-8"))
+            BrowserUtil.browse(arrowsAppImportUrl(text))
         }
     }
 
@@ -210,7 +204,8 @@ class ArrowsFileEditor(
     private fun withCypherClause(then: (String) -> Unit) {
         ApplicationManager.getApplication().invokeLater {
             val clause = Messages.showEditableChooseDialog(
-                "Cypher clause", "Cypher", null, arrayOf("CREATE", "MATCH", "MERGE"), "CREATE", null,
+                "Cypher clause", "Cypher", null,
+                CYPHER_CLAUSES.toTypedArray(), defaultCypherClause(null), null,
             ) ?: return@invokeLater
             then(clause)
         }
@@ -240,13 +235,8 @@ class ArrowsFileEditor(
     }
 
     override fun onOpenExternal(url: String) {
-        // Mirror the VS Code host allowlist: https only, no creds, known hosts.
-        val uri = try { URI(url) } catch (_: Exception) { null }
-        if (uri?.scheme == "https" && uri.userInfo == null && uri.host in ALLOWED_EXTERNAL_HOSTS) {
-            BrowserUtil.browse(url)
-        } else {
-            thisLogger().warn("arrows: refusing to open external url: $url")
-        }
+        if (isAllowedExternalUrl(url)) BrowserUtil.browse(url)
+        else thisLogger().warn("arrows: refusing to open external url: $url")
     }
     override fun onEmbedError(message: String?, error: String?) =
         thisLogger().warn("arrows embed error: ${message.orEmpty()} ${error.orEmpty()}".trim())
