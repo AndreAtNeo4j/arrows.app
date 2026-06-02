@@ -24,6 +24,7 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorState
 import com.intellij.openapi.fileEditor.ex.FileEditorManagerEx
+import com.intellij.openapi.fileEditor.impl.EditorWindow
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.project.Project
@@ -226,13 +227,21 @@ class ArrowsFileEditor(
         ApplicationManager.getApplication().invokeLater {
             if (project.isDisposed) return@invokeLater
             val source = FileEditorManagerEx.getInstanceEx(project).currentWindow ?: return@invokeLater
-            // Split the canvas off, then flip THIS pane to JSON. Flip the source pane (already
-            // loaded) — the new split's editors load async and aren't queryable yet.
-            source.split(SwingConstants.VERTICAL, true, file, true)
-            val composite = source.getComposite(file) ?: return@invokeLater
-            val textProvider = composite.allProviders.firstOrNull { it !is ArrowsFileEditorProvider }
-            if (textProvider != null) composite.setSelectedEditor(textProvider.editorTypeId)
-            else thisLogger().warn("arrows showJson: no text editor (providers=${composite.allProviders.map { it.editorTypeId }})")
+            // Canvas stays in this pane; open JSON in the split beside it. The split's editors
+            // load async, so flip it to the text view once its composite is populated.
+            val split = source.split(SwingConstants.VERTICAL, true, file, false) ?: return@invokeLater
+            selectJsonWhenLoaded(split, attempts = 40)
+        }
+    }
+
+    private fun selectJsonWhenLoaded(window: EditorWindow, attempts: Int) {
+        if (project.isDisposed) return
+        val composite = window.getComposite(file)
+        val textProvider = composite?.allProviders?.firstOrNull { it !is ArrowsFileEditorProvider }
+        when {
+            textProvider != null -> composite.setSelectedEditor(textProvider.editorTypeId)
+            attempts > 0 -> ApplicationManager.getApplication().invokeLater { selectJsonWhenLoaded(window, attempts - 1) }
+            else -> thisLogger().warn("arrows showJson: text editor never loaded (providers=${composite?.allProviders?.map { it.editorTypeId }})")
         }
     }
 
