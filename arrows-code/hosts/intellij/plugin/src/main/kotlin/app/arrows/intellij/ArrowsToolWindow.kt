@@ -185,7 +185,7 @@ private class ArrowsCellRenderer : ColoredTreeCellRenderer() {
     }
 }
 
-private fun workspaceArrowsFiles(project: Project): List<VirtualFile> {
+internal fun workspaceArrowsFiles(project: Project): List<VirtualFile> {
     // iterateContent already skips IDE-excluded roots; isGeneratedPath also drops
     // build/output copies a plainly-opened project hasn't marked, so each file shows once.
     val result = mutableListOf<VirtualFile>()

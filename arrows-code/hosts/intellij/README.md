@@ -13,6 +13,19 @@ nx/TypeScript build.
   and two-way Document sync, built on the IntelliJ Platform SDK. Compiles and
   packages (`buildPlugin`). Sidebar/commands/export round-trip not wired yet.
 
+## Tests
+
+```sh
+./gradlew test            # all: pure :protocol unit tests + :plugin integration tests
+./gradlew :protocol:test  # fast pure-logic units (parse, dispatch, host logic, request tracker)
+./gradlew :plugin:test    # BasePlatformTestCase integration (editor provider, workspace scan) in a headless IDE
+```
+
+Pure logic is unit-tested in `:protocol` (mirrors the VS Code `src/*.spec.ts`).
+Host wiring is integration-tested in `:plugin` (the counterpart of the VS Code
+`commands-test.mjs`). JCEF command bodies need a live browser, so — like the VS
+Code webview checks — they aren't exercised in headless tests.
+
 ## Build & install locally
 
 ```sh

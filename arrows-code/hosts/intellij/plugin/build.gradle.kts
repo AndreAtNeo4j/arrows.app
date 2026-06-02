@@ -15,12 +15,16 @@ dependencies {
     implementation("org.json:json:20240303")
     intellijPlatform {
         intellijIdeaCommunity("2024.3")
+        testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
     }
+    testImplementation("junit:junit:4.13.2")
 }
 
 kotlin {
     jvmToolchain(21)
 }
+
+tasks.test { useJUnit() }
 
 intellijPlatform {
     buildSearchableOptions = false // no custom settings UI to index
