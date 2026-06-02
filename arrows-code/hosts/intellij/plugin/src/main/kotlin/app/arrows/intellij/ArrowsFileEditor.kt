@@ -100,17 +100,6 @@ class ArrowsFileEditor(
             window.addEventListener('message', function(e) {
                 try { window.__arrowsToHost(JSON.stringify(e.data)); } catch (err) {}
             });
-            (function() {
-              // java-cef maps no cursor for the grab/grabbing CSS values, so the frozen page's
-              // pan cursor renders as a plain arrow; rewrite to 'move', which CEF does render.
-              var remap = { grab: 'move', grabbing: 'move' };
-              new MutationObserver(function(muts) {
-                for (var i = 0; i < muts.length; i++) {
-                  var el = muts[i].target, c = el.style && el.style.cursor;
-                  if (remap[c]) el.style.cursor = remap[c];
-                }
-              }).observe(document.documentElement, { attributes: true, attributeFilter: ['style'], subtree: true });
-            })();
         """.trimIndent()
         browser?.cefBrowser?.executeJavaScript(js, EMBED_URL, 0)
     }
