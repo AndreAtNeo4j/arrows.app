@@ -23,4 +23,20 @@ class CommandSurfaceTest {
     fun emptyForMalformedJson() {
         assertEquals(emptyList(), parseCommandMenu("not json"))
     }
+
+    // Guard against catalog drift: the IntelliJ kebab is parsed from the SAME
+    // commands.json the VS Code host uses. If the embed-menu set changes, this
+    // fails until the expectation (and the IntelliJ handler) are updated.
+    @Test
+    fun realCatalogYieldsTheSharedEmbedMenu() {
+        val json = javaClass.getResourceAsStream("/commands.json")!!.bufferedReader().use { it.readText() }
+        assertEquals(
+            listOf(
+                "arrows.validate", "arrows.format", "arrows.openSource", "arrows.copyCypher",
+                "arrows.exportCypher", "arrows.exportSvg", "arrows.exportGraphQL",
+                "arrows.openInArrowsApp", "arrows.renameLabel", "arrows.renameRelType",
+            ),
+            parseCommandMenu(json).map { it.id },
+        )
+    }
 }

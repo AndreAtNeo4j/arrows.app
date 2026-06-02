@@ -1,5 +1,34 @@
 import { describe, it, expect } from 'vitest';
-import { parseInboundMessage } from './messages';
+import { parseInboundMessage, type InboundMessage } from './messages';
+import fixtures from '../../fixtures/inbound-messages.json';
+
+// Normalized shape both hosts compare against, so the TS and Kotlin parsers
+// can't drift: the same fixtures drive both suites.
+function normalize(m: InboundMessage | null): unknown {
+  if (m === null) return null;
+  switch (m.type) {
+    case 'ready':
+      return { type: 'ready' };
+    case 'graph-changed':
+      return { type: m.type, nodeCount: m.graph.nodes.length, relCount: m.graph.relationships.length, docVersion: m.docVersion ?? null };
+    case 'response':
+      return { type: m.type, requestId: m.requestId, result: m.result ?? null, error: m.error ?? null };
+    case 'command':
+      return { type: m.type, name: m.name };
+    case 'open-external':
+      return { type: m.type, url: m.url };
+    case 'embed-error':
+      return { type: m.type, message: m.message ?? null, error: m.error ?? null };
+  }
+}
+
+describe('inbound-message conformance fixtures (shared with the Kotlin host)', () => {
+  for (const fx of fixtures) {
+    it(fx.name, () => {
+      expect(normalize(parseInboundMessage(fx.raw))).toEqual(fx.expect);
+    });
+  }
+});
 
 describe('parseInboundMessage', () => {
   it('parses a ready message, ignoring extra fields', () => {

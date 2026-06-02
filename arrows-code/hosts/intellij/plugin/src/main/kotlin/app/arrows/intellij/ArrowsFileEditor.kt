@@ -174,7 +174,7 @@ class ArrowsFileEditor(
 
     override fun onReady() = sendLoad()
 
-    override fun onGraphChanged(graph: GraphPayload, docVersion: Int?) {
+    override fun onGraphChanged(graph: GraphPayload, docVersion: Long?) {
         val doc = document ?: return
         // Write the graph back verbatim - preserves style and every top-level
         // field. (Canonical key ordering would need the bundle to emit it.)

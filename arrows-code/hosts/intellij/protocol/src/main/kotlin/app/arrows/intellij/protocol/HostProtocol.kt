@@ -10,7 +10,7 @@ data class GraphPayload(val raw: Map<String, Any?>) {
 
 sealed interface InboundMessage {
     data object Ready : InboundMessage
-    data class GraphChanged(val graph: GraphPayload, val docVersion: Int?) : InboundMessage
+    data class GraphChanged(val graph: GraphPayload, val docVersion: Long?) : InboundMessage
     data class Response(val requestId: String, val result: String?, val error: String?) : InboundMessage
     data class Command(val name: String) : InboundMessage
     data class OpenExternal(val url: String) : InboundMessage
@@ -33,7 +33,7 @@ fun parseInboundMessage(raw: String): InboundMessage? {
         "graph-changed" -> {
             val graph = obj.optJSONObject("graph") ?: return null
             if (graph.optJSONArray("nodes") == null || graph.optJSONArray("relationships") == null) return null
-            val docVersion = if (obj.opt("docVersion") is Number) obj.getInt("docVersion") else null
+            val docVersion = if (obj.opt("docVersion") is Number) obj.getLong("docVersion") else null
             InboundMessage.GraphChanged(GraphPayload(graph.toMap()), docVersion)
         }
 

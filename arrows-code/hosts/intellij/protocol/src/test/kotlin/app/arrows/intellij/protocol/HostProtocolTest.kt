@@ -19,7 +19,7 @@ class HostProtocolTest {
         assertEquals(
             InboundMessage.GraphChanged(
                 GraphPayload(mapOf("nodes" to emptyList<Any?>(), "relationships" to emptyList<Any?>())),
-                7
+                7L
             ),
             parseInboundMessage("""{"type":"graph-changed","graph":{"nodes":[],"relationships":[]},"docVersion":7}""")
         )

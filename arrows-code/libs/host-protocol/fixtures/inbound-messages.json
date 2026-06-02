@@ -1,0 +1,21 @@
+[
+  { "name": "ready ignores extra fields", "raw": { "type": "ready", "host": "x" }, "expect": { "type": "ready" } },
+  { "name": "graph-changed with docVersion", "raw": { "type": "graph-changed", "graph": { "nodes": [], "relationships": [] }, "docVersion": 7 }, "expect": { "type": "graph-changed", "nodeCount": 0, "relCount": 0, "docVersion": 7 } },
+  { "name": "graph-changed without docVersion", "raw": { "type": "graph-changed", "graph": { "nodes": [{ "id": "n0" }], "relationships": [] } }, "expect": { "type": "graph-changed", "nodeCount": 1, "relCount": 0, "docVersion": null } },
+  { "name": "graph-changed preserves a large docVersion (> 2^31)", "raw": { "type": "graph-changed", "graph": { "nodes": [], "relationships": [] }, "docVersion": 3000000000 }, "expect": { "type": "graph-changed", "nodeCount": 0, "relCount": 0, "docVersion": 3000000000 } },
+  { "name": "graph-changed ignores non-numeric docVersion", "raw": { "type": "graph-changed", "graph": { "nodes": [], "relationships": [] }, "docVersion": "nope" }, "expect": { "type": "graph-changed", "nodeCount": 0, "relCount": 0, "docVersion": null } },
+  { "name": "graph-changed rejects bad graph", "raw": { "type": "graph-changed", "graph": { "nodes": "x" } }, "expect": null },
+  { "name": "graph-changed rejects missing graph", "raw": { "type": "graph-changed" }, "expect": null },
+  { "name": "response with result", "raw": { "type": "response", "requestId": "svg-1", "result": "<svg/>" }, "expect": { "type": "response", "requestId": "svg-1", "result": "<svg/>", "error": null } },
+  { "name": "response with error", "raw": { "type": "response", "requestId": "svg-1", "error": "boom" }, "expect": { "type": "response", "requestId": "svg-1", "result": null, "error": "boom" } },
+  { "name": "response rejects missing requestId", "raw": { "type": "response", "result": "x" }, "expect": null },
+  { "name": "response rejects numeric requestId", "raw": { "type": "response", "requestId": 42 }, "expect": null },
+  { "name": "command with name", "raw": { "type": "command", "name": "arrows.validate" }, "expect": { "type": "command", "name": "arrows.validate" } },
+  { "name": "command rejects missing name", "raw": { "type": "command" }, "expect": null },
+  { "name": "open-external with url", "raw": { "type": "open-external", "url": "https://neo4j.com" }, "expect": { "type": "open-external", "url": "https://neo4j.com" } },
+  { "name": "open-external rejects missing url", "raw": { "type": "open-external" }, "expect": null },
+  { "name": "embed-error with message and error", "raw": { "type": "embed-error", "message": "render failed", "error": "stack" }, "expect": { "type": "embed-error", "message": "render failed", "error": "stack" } },
+  { "name": "embed-error empty", "raw": { "type": "embed-error" }, "expect": { "type": "embed-error", "message": null, "error": null } },
+  { "name": "unknown type", "raw": { "type": "nope" }, "expect": null },
+  { "name": "empty object", "raw": {}, "expect": null }
+]

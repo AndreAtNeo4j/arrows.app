@@ -8,7 +8,7 @@ import kotlin.test.assertTrue
 private class RecordingHost : HostActions {
     val calls = mutableListOf<String>()
     override fun onReady() { calls += "ready" }
-    override fun onGraphChanged(graph: GraphPayload, docVersion: Int?) { calls += "graph:${graph.nodes.size}:${docVersion}" }
+    override fun onGraphChanged(graph: GraphPayload, docVersion: Long?) { calls += "graph:${graph.nodes.size}:${docVersion}" }
     override fun onResponse(requestId: String, result: String?, error: String?) { calls += "response:$requestId:$result:$error" }
     override fun onCommand(name: String) { calls += "command:$name" }
     override fun onOpenExternal(url: String) { calls += "open:$url" }

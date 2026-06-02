@@ -3,7 +3,7 @@ package app.arrows.intellij.protocol
 /** Host-side reactions to embed -> host messages; the FileEditor implements this against the Document, browser, and platform services. */
 interface HostActions {
     fun onReady()
-    fun onGraphChanged(graph: GraphPayload, docVersion: Int?)
+    fun onGraphChanged(graph: GraphPayload, docVersion: Long?)
     fun onResponse(requestId: String, result: String?, error: String?)
     fun onCommand(name: String)
     fun onOpenExternal(url: String)
