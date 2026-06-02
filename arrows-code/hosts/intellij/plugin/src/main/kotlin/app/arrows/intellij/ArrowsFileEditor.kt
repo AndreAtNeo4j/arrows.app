@@ -24,6 +24,7 @@ import org.cef.CefApp
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 import org.cef.handler.CefLoadHandlerAdapter
+import org.json.JSONException
 import org.json.JSONObject
 import java.beans.PropertyChangeListener
 import javax.swing.JComponent
@@ -83,7 +84,7 @@ class ArrowsFileEditor(
 
     private fun sendLoad() {
         val doc = document ?: return
-        val graph = try { JSONObject(doc.text) } catch (e: Exception) { return }
+        val graph = try { JSONObject(doc.text) } catch (e: JSONException) { return }
         val message = JSONObject()
             .put("type", "load")
             .put("graph", graph)
