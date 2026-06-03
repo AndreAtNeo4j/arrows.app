@@ -10,7 +10,7 @@ Please report unacceptable behavior to feedback@neo4j.com.
 ## Subsystems
 
 - **Web app** — `apps/arrows-ts/` plus shared libraries in `libs/{model,graphics,selectors}`.
-- **VS Code extension** — `arrows-code/`. Self-contained; see [`arrows-code/README.md`](arrows-code/README.md) for build, test, and architecture rules.
+- **IDE editors** — `arrows-code/`. A VS Code extension and an IntelliJ plugin, self-contained; see [`arrows-code/README.md`](arrows-code/README.md) for build, test, and architecture rules.
 
 ## Quickstart
 

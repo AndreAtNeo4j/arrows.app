@@ -1,0 +1,12 @@
+{
+  "extends": ["../../../.eslintrc.json"],
+  "ignorePatterns": ["!**/*", "media/**", "scripts/**", "tests/**"],
+  "overrides": [
+    {
+      "files": ["*.spec.ts", "*.spec.tsx", "*.test.ts"],
+      "rules": {
+        "@typescript-eslint/no-non-null-assertion": "off"
+      }
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "name": "arrows-code-messages",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "arrows-code/libs/messages/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/esbuild:esbuild",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/arrows-code/libs/messages",
+        "main": "arrows-code/libs/messages/src/index.ts",
+        "tsConfig": "arrows-code/libs/messages/tsconfig.lib.json",
+        "assets": ["arrows-code/libs/messages/*.md"],
+        "generatePackageJson": true
+      }
+    },
+    "lint": {
+      "executor": "@nx/linter:eslint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["arrows-code/libs/messages/**/*.ts"]
+      }
+    },
+    "test": {
+      "executor": "@nx/vite:test",
+      "outputs": ["coverage/arrows-code/libs/messages"],
+      "options": {
+        "passWithNoTests": true,
+        "reportsDirectory": "../../../coverage/arrows-code/libs/messages"
+      }
+    }
+  },
+  "tags": ["scope:arrows-code", "type:lib"]
+}

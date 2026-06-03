@@ -30,9 +30,9 @@ To chat directly with the developers about contributing code, join us over on [N
 
 **Deploying to GCP:** See [DEPLOYMENT.md](DEPLOYMENT.md) for the publishing workflow, prerequisites (GCP project, API key, Secret Manager), and how to deploy to production or staging.
 
-## Arrows for VS Code
+## Arrows in your IDE
 
-A VS Code extension lives under [`arrows-code/`](arrows-code/) and embeds the same canvas inside `.arrows` file tabs with two-way sync to the underlying JSON. It reuses the web app via a Vite embed entry rather than duplicating any canvas code. See [`arrows-code/README.md`](arrows-code/README.md) for build and install instructions, and [`arrows-code/hosts/vscode/README.md`](arrows-code/hosts/vscode/README.md) for end-user docs.
+Editor integrations live under [`arrows-code/`](arrows-code/) — a VS Code extension and an IntelliJ Platform plugin. Both embed the same canvas inside `.arrows` file tabs with two-way sync to the underlying JSON, reusing the web app via a Vite embed entry rather than duplicating any canvas code. See [`arrows-code/README.md`](arrows-code/README.md) for build and install instructions; end-user docs are in [`arrows-code/extensions/vscode/README.md`](arrows-code/extensions/vscode/README.md) and [`arrows-code/extensions/intellij/README.md`](arrows-code/extensions/intellij/README.md).
 
 ---
 

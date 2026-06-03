@@ -1,41 +1,23 @@
 # arrows-code
 
-Subsystem brings arrows.app into VS Code. Self-contained under `arrows-code/`; deletable without breaking the host monorepo.
+Brings arrows.app into developer IDEs — a VS Code extension and an IntelliJ plugin. Self-contained under `arrows-code/`; deletable without breaking the host monorepo.
 
-## Layout
-
-```
-arrows-code/
-├── hosts/                editor-specific adapters (one dir per editor)
-│   ├── vscode/           VS Code extension (only VS-Code-coupled code)
-│   └── intellij/         IntelliJ/JCEF plugin (planned, Kotlin/Gradle)
-├── libs/                 host-agnostic, no editor SDK
-│   ├── format-json/      read/write canonical .arrows JSON
-│   ├── graph-logic/      layout + patch + validation algorithms
-│   └── host-protocol/    embed↔host wire contract + parseInboundMessage
-└── fixtures/examples/    bundled .arrows examples shown in sidebar
-```
-
-**Separation rule.** `hosts/*` is editor-specific and may import that editor's
-SDK. `libs/*` is host-agnostic and must never import an editor SDK. If logic is
-shared, it goes in a lib — not inlined in a host.
+Layout, the cascade from the web app, and decoupling/import rules live in [README.md](README.md). This file is the working agent rules; it does not repeat them.
 
 **Cross-language caveat.** A Kotlin host (IntelliJ) cannot import the TypeScript
 libs. The libs de-duplicate logic among TypeScript hosts; the two things both
 hosts genuinely share are the **web bundle** and the **protocol contract**.
 Logic that must be single-source across languages belongs in the bundle.
 
-Only allowed imports from the host repo: `@neo4j-arrows/{model,graphics,selectors}`. Never `apps/arrows-ts/**`.
-
 ## Commands
 
 ```bash
-npx nx test arrows-code-validator               # one project
-npx nx run-many -t test --projects=arrows-code-* # all
-cd arrows-code/hosts/vscode && npm run install:local  # build + install (then Reload Window in VS Code)
-cd arrows-code/hosts/vscode && npm run build        # build only (no install)
-cd arrows-code/hosts/vscode && npm run commands-test  # real VS Code Electron host
-cd arrows-code/hosts/vscode && npm run package      # build .vsix
+npx nx test arrows-code-graph-logic              # one lib
+npx nx run-many -t test --projects=arrows-code-* # all libs
+cd arrows-code/extensions/vscode && npm run install:local  # build + install (then Reload Window in VS Code)
+cd arrows-code/extensions/vscode && npm run build        # build only (no install)
+cd arrows-code/extensions/vscode && npm run commands-test  # real VS Code Electron host
+cd arrows-code/extensions/vscode && npm run package      # build .vsix
 ```
 
 ## Comment policy
@@ -61,24 +43,19 @@ Never write:
 
 When trimming an existing comment, ask: would removing it confuse a competent reader? If no, remove.
 
-## Shared canvas - one codebase, two surfaces
+## Shared canvas - one codebase, every host
 
-The VS Code extension does **not** have its own copy of the graph canvas, renderer, or inspector. It embeds the arrows-ts app as a Vite bundle.
+Neither host has its own copy of the graph canvas, renderer, or inspector. Both embed the arrows-ts app as a Vite bundle.
 
 - All canvas logic lives in `apps/arrows-ts/src/` (shared with the web app).
-- The embed-specific files are only in `apps/arrows-ts/src/embed/`: the postMessage bridge (`bridge.ts`), the entry point (`main.tsx`), and the thin toolbar overlay (`EmbedToolbar.tsx`, `EmbedActionMenu.tsx`, `EmbedFooter.tsx`).
-- **To change any canvas behaviour**, edit `apps/arrows-ts/src/` as you would for the web app, then rebuild: `cd arrows-code/hosts/vscode && npm run build`.
+- The embed-specific code is only under `apps/arrows-ts/src/embed/`: the postMessage bridge (`bridge/`), the entry point (`main.tsx`), and the thin UI overlay (`ui/EmbedToolbar.tsx`, `ui/EmbedActionMenu.tsx`, `ui/EmbedFooter.tsx`).
+- **To change any canvas behaviour**, edit `apps/arrows-ts/src/` as you would for the web app, then rebuild: `cd arrows-code/extensions/vscode && npm run build`.
 
 Never duplicate canvas or renderer code into `arrows-code/`. If something only works in one surface, the split belongs in `embed/`.
 
 ## Architecture invariants
 
-Inside `arrows-code/`:
-
-- **Graph is immutable.** Reducers and patch ops return new objects; never mutate in place.
-- **One panel per document URI.** `PreviewProvider.panels` is a static Map; the provider is a singleton per extension host.
-- **Single edit chain in `PreviewProvider`.** `applyChain: Promise<unknown>` serializes `applyEdit` calls so rapid webview emits don't race on the doc range. Don't introduce a second chain.
-- **Webview command allowlist.** Only IDs in `webviewAllowedCommandIds` (from `commandsCatalog.ts`) can be invoked via the `command` postMessage channel.
+The VS Code host invariants (immutable graph, one panel per URI, single edit chain, webview command allowlist) are in [README.md](README.md#architecture-invariants).
 
 In the embed bundle (`apps/arrows-ts/src/embed/`):
 
@@ -86,12 +63,10 @@ In the embed bundle (`apps/arrows-ts/src/embed/`):
 - **Document-version guard.** Every webview→host edit checks `originatingDocVersion` against current. Stale edits drop.
 - **Echo suppression.** Inbound `load` is compared canonically (entityType stripped) against the last outbound emit; matches are no-ops.
 
-When editing the bridge, run `apps/arrows-ts/src/embed/bridge.spec.ts` - it hammers interleaved drag/edit/load through a fake store.
+When editing the bridge, run its torture spec `apps/arrows-ts/src/embed/bridge/bridge.spec.ts` — it hammers interleaved drag/edit/load through a fake store. Add new bridge scenarios there, not ad-hoc tests.
 
 ## Test conventions
 
 Co-located `*.spec.ts(x)` next to source. Vitest.
 
 `commands-test.mjs` boots a real VS Code Electron host via `@vscode/test-electron`. Run before packaging.
-
-The bridge has a torture spec (`apps/arrows-ts/src/embed/bridge.spec.ts`) that hammers interleaved drag/edit/load operations through a fake store. Add new bridge scenarios there, not new ad-hoc tests.

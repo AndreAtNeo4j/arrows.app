@@ -17,7 +17,7 @@
     "paths": {
       "@arrows-code/format-json": ["arrows-code/libs/format-json/src/index.ts"],
       "@arrows-code/graph-logic": ["arrows-code/libs/graph-logic/src/index.ts"],
-      "@arrows-code/host-protocol": ["arrows-code/libs/host-protocol/src/index.ts"],
+      "@arrows-code/messages": ["arrows-code/libs/messages/src/index.ts"],
       "@neo4j-arrows/graphics": ["libs/graphics/src/index.ts"],
       "@neo4j-arrows/model": ["libs/model/src/index.ts"],
       "@neo4j-arrows/selectors": ["libs/selectors/src/index.ts"]

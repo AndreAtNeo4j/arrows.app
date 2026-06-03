@@ -1,16 +1,16 @@
 # arrows-code
 
-Brings the arrows.app canvas into developer IDEs — a **VS Code extension** and an **IntelliJ Platform plugin** — both embedding the same web bundle over the same host protocol.
+Brings the arrows.app canvas into developer IDEs — a **VS Code extension** and an **IntelliJ Platform plugin** — both embedding the same web bundle over the same message contract.
 
 Self-contained subsystem inside the `arrows.app` monorepo. Deleting `arrows-code/` removes it cleanly - the parent web app is untouched.
 
-This README documents the VS Code host; the IntelliJ host is a thin Kotlin/JCEF adapter — see [hosts/intellij/README.md](hosts/intellij/README.md).
+This README documents the VS Code extension; the IntelliJ plugin is a thin Kotlin/JCEF adapter — see [extensions/intellij/README.md](extensions/intellij/README.md).
 
 ## Layout
 
 ```text
 arrows-code/
-├── hosts/                       editor-specific adapters (one dir per editor)
+├── extensions/                  editor-specific adapters (one dir per editor)
 │   ├── vscode/                  VS Code extension — only VS-Code-coupled code
 │   │   └── src/
 │   │       ├── PreviewProvider.ts   CustomTextEditorProvider + host↔webview bridge
@@ -25,11 +25,11 @@ arrows-code/
 ├── libs/                        host-agnostic — no editor SDK
 │   ├── format-json/             read/write canonical .arrows JSON, deterministic output
 │   ├── graph-logic/             layout (5 algorithms) + patch ops + structural validation
-│   └── host-protocol/           embed↔host wire contract + parseInboundMessage
+│   └── messages/                embed↔host wire contract + parseInboundMessage
 └── fixtures/examples/           .arrows files copied into media/embed examples at build time
 ```
 
-`hosts/*` is editor-specific (may import the editor SDK); `libs/*` is host-agnostic (never imports one). Shared logic lives in a lib, not inlined in a host.
+`extensions/*` is editor-specific (may import the editor SDK); `libs/*` is host-agnostic (never imports one). Shared logic lives in a lib, not inlined in an extension.
 
 The canvas, renderer, and inspector are **not** here - they live in `apps/arrows-ts/src/` and ship as a Vite bundle into `media/embed/` (gitignored). See `CLAUDE.md` for the shared-canvas rule.
 
@@ -63,16 +63,16 @@ What the extension defines **on top of** the bundle (does NOT auto-update from a
 - Pan tool + cursor-anchored wheel-zoom (intentionally bypasses arrows.app's `minScale` floor) - `apps/arrows-ts/src/embed/interactions/panInteraction.ts`.
 - Refit policy (only on `WINDOW_RESIZED` + `TOGGLE_INSPECTOR`, not on every CRUD action) - `apps/arrows-ts/src/embed/store/embedViewportMiddleware.ts`.
 - Shift+click multi-select, double-click-to-create-node, drag-continues-off-canvas + edge-pan - `apps/arrows-ts/src/embed/interactions/` event listeners.
-- Webview-scoped CSS (subtle scrollbar inside the kebab menu) - `apps/arrows-ts/src/embed/embed.css`.
+- Webview-scoped CSS (subtle scrollbar inside the kebab menu) - inline in `apps/arrows-ts/src/embed/ui/EmbedActionMenu.tsx`.
 - VS Code host code: commands, sidebar, custom editor provider, webview HTML/CSP, `format-json` lib.
 
 ### Brand strings + URLs duplicated (not cascaded)
 
 The web app's brand strings (`https://neo4j.com/labs/arrows`, "Powered by Neo4j Labs", the Neo4j logo SVG) live inside `Footer.jsx`'s JSX - not exported as constants. The extension references them in three places that would need manual update if rebranded:
 
-- `arrows-code/hosts/vscode/src/commands/file.ts` - `TUTORIAL_URL`, `ALLOWED_HOSTS` allowlist
-- `arrows-code/hosts/vscode/src/commands/export.ts` - `https://arrows.app/#/import/json=` URL construction for `openInArrowsApp`
-- `arrows-code/hosts/vscode/src/commands/file.ts` - `arrows.app` prompt text for `importGraph`
+- `arrows-code/extensions/vscode/src/commands/file.ts` - `TUTORIAL_URL`, `ALLOWED_HOSTS` allowlist
+- `arrows-code/extensions/vscode/src/commands/export.ts` - `https://arrows.app/#/import/json=` URL construction for `openInArrowsApp`
+- `arrows-code/extensions/vscode/src/commands/file.ts` - `arrows.app` prompt text for `importGraph`
 
 ## Decoupling rules
 
@@ -89,20 +89,25 @@ Forbidden: any path under `apps/arrows-ts/**`. The embed is consumed as a built 
 ```bash
 # Unit tests (vitest) for the one library + the extension src
 npx nx test arrows-code-format-json
-cd arrows-code/hosts/vscode && npm test
+cd arrows-code/extensions/vscode && npm test
 
 # Build the embed bundle + extension bundle
-cd arrows-code/hosts/vscode && npm run build
+cd arrows-code/extensions/vscode && npm run build
 
 # Real VS Code Electron smoke test (commands resolve, extension activates)
-cd arrows-code/hosts/vscode && npm run commands-test
+cd arrows-code/extensions/vscode && npm run commands-test
+
+# Playwright E2E: drives the embed bundle against the arrows-ts dev server
+cd arrows-code/extensions/vscode && npm run e2e
 
 # Package .vsix (runs build + test + commands-test)
-cd arrows-code/hosts/vscode && npm run package
+cd arrows-code/extensions/vscode && npm run package
 
 # Build + install locally (then Reload Window in VS Code)
-cd arrows-code/hosts/vscode && npm run install:local
+cd arrows-code/extensions/vscode && npm run install:local
 ```
+
+See [HOW-TO-TEST.md](HOW-TO-TEST.md) for what each layer covers and the manual sanity check.
 
 ## Architecture invariants
 
