@@ -21,8 +21,11 @@ export function EmbedDragContinuation(): null {
       return !!dt && dt !== 'NONE';
     };
 
+    // Capture-phase on document (not the canvas element) so it survives a canvas
+    // remount after an error-boundary reset; guarded to canvas targets to keep scope.
     const onMouseLeave = (e: MouseEvent) => {
       if (!isDragging()) return;
+      if (!(e.target instanceof Element) || e.target.tagName !== 'CANVAS') return;
       e.stopImmediatePropagation();
       e.preventDefault();
     };
@@ -46,12 +49,11 @@ export function EmbedDragContinuation(): null {
       }
     };
 
-    const canvas = firstCanvas();
-    if (canvas) canvas.addEventListener('mouseleave', onMouseLeave, true);
+    document.addEventListener('mouseleave', onMouseLeave, true);
     document.addEventListener('mousemove', onMouseMoveAnywhere);
 
     return () => {
-      if (canvas) canvas.removeEventListener('mouseleave', onMouseLeave, true);
+      document.removeEventListener('mouseleave', onMouseLeave, true);
       document.removeEventListener('mousemove', onMouseMoveAnywhere);
     };
   }, [dispatch, store]);

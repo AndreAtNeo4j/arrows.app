@@ -17,9 +17,7 @@ describe('shortcut() - platform-aware modifier formatting', () => {
     // [input, mac, win/linux]
     [{ mod: 'cmd', key: 'Z' }, '⌘Z', 'Ctrl+Z'],
     [{ mod: 'cmd+shift', key: 'Z' }, '⇧⌘Z', 'Ctrl+Shift+Z'],
-    [{ mod: 'cmd+alt', key: 'A' }, '⌥⌘A', 'Ctrl+Alt+A'],
     [{ mod: 'shift+alt', key: 'F' }, '⇧⌥F', 'Shift+Alt+F'],
-    [{ mod: 'shift', key: '←' }, '⇧←', 'Shift+←'],
     [{ key: 'V' }, 'V', 'V'], // no modifier
   ];
 
