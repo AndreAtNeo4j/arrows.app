@@ -46,10 +46,12 @@ dist
 
 # arrows-code subsystem build/test artifacts
 arrows-code/**/dist/
-arrows-code/hosts/vscode/.vscode-test/
-arrows-code/hosts/vscode/*.vsix
-arrows-code/hosts/vscode/media/embed/
-arrows-code/hosts/vscode/media/examples/
+arrows-code/extensions/vscode/.vscode-test/
+arrows-code/extensions/vscode/test-results/
+arrows-code/extensions/vscode/*.vsix
+arrows-code/extensions/vscode/media/embed/
+arrows-code/extensions/vscode/media/examples/
+arrows-code/extensions/intellij/.intellijPlatform/
 .vscode-test/
 
 # Stray editor scratch files
