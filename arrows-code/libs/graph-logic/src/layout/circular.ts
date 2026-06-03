@@ -1,8 +1,4 @@
-// Algorithm: single-ring circular layout. All nodes placed equiangularly on
-// one circle, sorted by id. Radius grows linearly with |V| so node bodies
-// don't overlap. Standard "circle" layout shared by Cytoscape / Gephi / yEd.
-// Reference: https://js.cytoscape.org/#layouts/circle
-
+// https://js.cytoscape.org/#layouts/circle
 import type { LayoutFn } from './types';
 import { applyPositions, round1 } from './types';
 

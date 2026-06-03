@@ -1,10 +1,4 @@
-// Algorithm: Fruchterman-Reingold force-directed graph drawing
-// (Fruchterman & Reingold, "Graph Drawing by Force-directed Placement", 1991).
-// Inverse-square repulsion + linear spring attraction, cooled per iteration,
-// then a hard-collision pass using per-node effective radii (caption + labels +
-// properties). Deterministic: identical input -> identical output.
-// Reference: https://en.wikipedia.org/wiki/Force-directed_graph_drawing
-
+// Fruchterman-Reingold 1991: https://en.wikipedia.org/wiki/Force-directed_graph_drawing
 import type { LayoutFn } from './types';
 import { applyPositions, effectiveRadius, round1 } from './types';
 
@@ -106,7 +100,6 @@ export const forceDirected: LayoutFn = async (graph, onProgress) => {
     }
   }
 
-  // Re-center bounding box on origin.
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const n of sim) {
     if (n.x < minX) minX = n.x;

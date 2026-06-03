@@ -12,5 +12,4 @@ export const CODES = {
   duplicateId: 'structural.duplicate-id',
   emptyRequired: 'structural.empty-required-field',
   styleKeyUnknown: 'structural.style-key-unknown',
-  styleValueInvalid: 'structural.style-value-invalid',
 } as const;

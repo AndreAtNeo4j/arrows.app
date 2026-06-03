@@ -1,7 +1,3 @@
-// Shared types for the layout registry. Each layout is a pure async function
-// that takes a graph and returns a new graph with updated positions; everything
-// else (caption / labels / properties / style) is preserved untouched.
-
 export interface NodeIn {
   id: string;
   position?: { x?: unknown; y?: unknown } | unknown;
@@ -16,7 +12,6 @@ export interface GraphIn { nodes: NodeIn[]; relationships: RelIn[]; [k: string]:
 export type LayoutProgress = (fraction: number) => void;
 export type LayoutFn = (graph: GraphIn, onProgress?: LayoutProgress) => Promise<GraphIn>;
 
-/** Replace each node's position with the one from `byId`. Other fields untouched. */
 export function applyPositions(
   graph: GraphIn,
   byId: Map<string, { x: number; y: number }>,
@@ -30,7 +25,7 @@ export function applyPositions(
   };
 }
 
-/** 1dp rounding - stable JSON diffs, no 12-digit floats. */
+// 1dp rounding - stable JSON diffs, no 12-digit floats.
 export function round1(value: number): number {
   return Math.round(value * 10) / 10;
 }
@@ -38,10 +33,7 @@ export function round1(value: number): number {
 export const NODE_BODY_RADIUS = 80;
 export const LABEL_LINE_HEIGHT = 30;
 
-/**
- * Approximate hit-radius including label/property lines. Used by collision
- * passes and by the radial layout to scale rings so captions never overlap.
- */
+// Approximate node hit-radius (body + label/property lines); used by collision passes and radial ring scaling.
 export function effectiveRadius(n: NodeIn): number {
   const labelLines = Array.isArray(n.labels) ? (n.labels as unknown[]).length : 0;
   const propLines = n.properties && typeof n.properties === 'object'
