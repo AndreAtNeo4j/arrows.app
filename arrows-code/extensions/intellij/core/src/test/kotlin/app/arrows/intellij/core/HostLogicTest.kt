@@ -14,6 +14,7 @@ class HostLogicTest {
         assertTrue(isAllowedExternalUrl("https://github.com/neo4j-labs/arrows.app"))
         assertTrue(isAllowedExternalUrl("https://www.youtube.com/watch?v=x"))
         assertTrue(isAllowedExternalUrl("HTTPS://neo4j.com"))   // scheme is case-insensitive
+        assertTrue(isAllowedExternalUrl("https://GitHub.com/x")) // host is case-insensitive
     }
 
     @Test

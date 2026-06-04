@@ -10,6 +10,7 @@ import app.arrows.intellij.core.dispatchInbound
 import app.arrows.intellij.core.isAllowedExternalUrl
 import app.arrows.intellij.core.LAYOUTS
 import app.arrows.intellij.core.LayoutOption
+import app.arrows.intellij.core.MAX_LAYOUT_NODES
 import app.arrows.intellij.core.labelsInGraph
 import app.arrows.intellij.core.layoutGraph
 import app.arrows.intellij.core.parseCommandMenu
@@ -243,6 +244,11 @@ class ArrowsFileEditor(
             val doc = document ?: return@invokeLater
             val text = doc.text
             if (!parsesOrWarn(text, "Cannot lay out: this graph doesn't parse cleanly.")) return@invokeLater
+            val nodeCount = runCatching { JSONObject(text).optJSONArray("nodes")?.length() ?: 0 }.getOrDefault(0)
+            if (nodeCount > MAX_LAYOUT_NODES) {
+                arrowsNotify(project, "$nodeCount nodes exceeds the $MAX_LAYOUT_NODES-node auto-arrange limit.", NotificationType.WARNING)
+                return@invokeLater
+            }
             val props = PropertiesComponent.getInstance()
             val preselect = LAYOUTS.firstOrNull { it.id == props.getValue(LAST_LAYOUT_KEY) } ?: LAYOUTS.first()
             chooseInPopup(project, "Auto-arrange nodes", LAYOUTS, preselect, { "${it.label} — ${it.description}" }) { chosen ->

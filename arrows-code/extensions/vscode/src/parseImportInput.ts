@@ -8,9 +8,12 @@ function decodeArrowsAppImportUrl(input: string): string | null {
   }
 }
 
+// Mirrors the Kotlin host's parseImportInput cap; bounds decode/parse of a pasted share URL.
+const MAX_IMPORT_BYTES = 4 * 1024 * 1024;
+
 export function parseImportInput(raw: string): string | null {
   const trimmed = raw.trim();
-  if (!trimmed) return null;
+  if (!trimmed || trimmed.length > MAX_IMPORT_BYTES) return null;
   if (/^https?:\/\//i.test(trimmed) || /import\/json=/.test(trimmed)) {
     return decodeArrowsAppImportUrl(trimmed);
   }

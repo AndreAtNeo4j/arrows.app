@@ -9,6 +9,9 @@ import kotlin.math.min
 import kotlin.math.sin
 import kotlin.math.sqrt
 
+// Force-directed layout is O(n^2); above this an untrusted .arrows file hangs the host. Keep in sync with format.ts.
+const val MAX_LAYOUT_NODES = 2000
+
 data class LayoutOption(val id: String, val label: String, val description: String)
 
 // Order = picker order; first = default.

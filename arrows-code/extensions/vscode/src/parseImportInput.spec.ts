@@ -22,6 +22,10 @@ describe('parseImportInput', () => {
     expect(parseImportInput('   ')).toBeNull();
   });
 
+  it('returns null on oversized input (DoS guard)', () => {
+    expect(parseImportInput('{'.repeat(5 * 1024 * 1024))).toBeNull();
+  });
+
   it('decodes a full arrows.app share URL with #/import/json= fragment', () => {
     const b64 = Buffer.from(aliceBobJson, 'utf8').toString('base64');
     const url = `https://arrows.app/#/import/json=${encodeURIComponent(b64)}`;

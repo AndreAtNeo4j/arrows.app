@@ -11,7 +11,7 @@ val ALLOWED_EXTERNAL_HOSTS = setOf(
 
 fun isAllowedExternalUrl(url: String): Boolean {
     val uri = try { URI(url) } catch (_: Exception) { return false }
-    return uri.scheme?.lowercase() == "https" && uri.userInfo == null && uri.host in ALLOWED_EXTERNAL_HOSTS
+    return uri.scheme?.lowercase() == "https" && uri.userInfo == null && uri.host?.lowercase() in ALLOWED_EXTERNAL_HOSTS
 }
 
 const val TUTORIAL_URL = "https://www.youtube.com/watch?v=ZHJ-BrKJ8A4"

@@ -4,6 +4,8 @@ import { LAYOUTS, findLayout, type LayoutId } from '@arrows-code/graph-logic';
 import { replaceDocumentText, resolveDocument } from './helpers';
 
 const LAST_LAYOUT_KEY = 'arrows.lastLayoutId';
+// Force-directed layout is O(n^2); above this an untrusted .arrows file hangs the host. Keep in sync with GraphLayout.kt.
+const MAX_LAYOUT_NODES = 2000;
 
 export function makeFormat(context: vscode.ExtensionContext) {
   return async (arg?: unknown): Promise<void> => {
@@ -12,6 +14,10 @@ export function makeFormat(context: vscode.ExtensionContext) {
     const { graph, diagnostics } = readGraph(document.getText());
     if (diagnostics.some((d) => d.severity === 'error')) {
       void vscode.window.showWarningMessage('Cannot lay out: file does not parse cleanly.');
+      return;
+    }
+    if (graph.nodes.length > MAX_LAYOUT_NODES) {
+      void vscode.window.showWarningMessage(`Arrows: ${graph.nodes.length} nodes exceeds the ${MAX_LAYOUT_NODES}-node auto-arrange limit.`);
       return;
     }
 
