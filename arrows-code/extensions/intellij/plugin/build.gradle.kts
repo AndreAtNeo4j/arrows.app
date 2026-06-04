@@ -47,7 +47,16 @@ tasks.processResources {
         exclude("embed/**")
         from(embedBundle) { into("embed") }
     }
-    from(sharedMedia) { include("sidebar-icon.svg"); into("icons"); rename { "arrows.svg" } }
+    // Tool-window icon needs light + dark variants (currentColor renders black, invisible on the
+    // dark stripe); IntelliJ auto-picks *_dark.svg under dark themes. Colors = the platform icon greys.
+    from(sharedMedia) {
+        include("sidebar-icon.svg"); into("icons"); rename { "arrows.svg" }
+        filter { it.replace("stroke=\"currentColor\"", "stroke=\"#6C707E\"") }
+    }
+    from(sharedMedia) {
+        include("sidebar-icon.svg"); into("icons"); rename { "arrows_dark.svg" }
+        filter { it.replace("stroke=\"currentColor\"", "stroke=\"#CED0D6\"") }
+    }
     // IntelliJ file-type icons are 16x16; the source SVG is 256px, so size this copy down (same artwork).
     from(sharedMedia) {
         include("file-icon.svg")
