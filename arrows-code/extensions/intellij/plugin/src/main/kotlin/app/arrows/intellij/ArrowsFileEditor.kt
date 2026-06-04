@@ -9,6 +9,7 @@ import app.arrows.intellij.core.arrowsAppShare
 import app.arrows.intellij.core.dispatchInbound
 import app.arrows.intellij.core.isAllowedExternalUrl
 import app.arrows.intellij.core.LAYOUTS
+import app.arrows.intellij.core.LayoutOption
 import app.arrows.intellij.core.labelsInGraph
 import app.arrows.intellij.core.layoutGraph
 import app.arrows.intellij.core.parseCommandMenu
@@ -237,43 +238,40 @@ class ArrowsFileEditor(
         }
     }
 
-    // Force-directed is O(n^2); run the layout off the EDT under a cancellable progress dialog.
     private fun format() {
         ApplicationManager.getApplication().invokeLater {
             val doc = document ?: return@invokeLater
             val text = doc.text
             if (!parsesOrWarn(text, "Cannot lay out: this graph doesn't parse cleanly.")) return@invokeLater
-            val labels = LAYOUTS.map { it.label }.toTypedArray()
             val props = PropertiesComponent.getInstance()
-            val lastLabel = LAYOUTS.firstOrNull { it.id == props.getValue(LAST_LAYOUT_KEY) }?.label ?: labels.first()
-            val chosen = Messages.showEditableChooseDialog(
-                "Pick a layout algorithm", "Auto-arrange Nodes", null, labels, lastLabel, null,
-            )?.let { picked -> LAYOUTS.firstOrNull { it.label == picked } } ?: return@invokeLater
-            props.setValue(LAST_LAYOUT_KEY, chosen.id)
+            val preselect = LAYOUTS.firstOrNull { it.id == props.getValue(LAST_LAYOUT_KEY) } ?: LAYOUTS.first()
+            chooseInPopup(component, "Auto-arrange Nodes", LAYOUTS, preselect, { "${it.label} — ${it.description}" }) { chosen ->
+                props.setValue(LAST_LAYOUT_KEY, chosen.id)
+                runLayout(doc, text, chosen)
+            }
+        }
+    }
 
-            val next = ProgressManager.getInstance().runProcessWithProgressSynchronously<String?, RuntimeException>(
-                { layoutGraph(text, chosen.id) },
-                "Arrows: ${chosen.label.lowercase()} layout…", true, project,
-            ) ?: return@invokeLater
-            // The doc can change during the off-EDT layout; don't clobber a concurrent edit.
-            if (doc.text != text) {
-                arrowsNotify(project, "The file changed during layout; run it again to apply.", NotificationType.WARNING)
-                return@invokeLater
-            }
-            if (next != text) {
-                WriteCommandAction.runWriteCommandAction(project) { doc.setText(next) }
-                arrowsNotify(project, "Applied ${chosen.label.lowercase()} layout.")
-            }
+    // Force-directed is O(n^2); run the layout off the EDT under a cancellable progress dialog.
+    private fun runLayout(doc: Document, text: String, chosen: LayoutOption) {
+        val next = ProgressManager.getInstance().runProcessWithProgressSynchronously<String?, RuntimeException>(
+            { layoutGraph(text, chosen.id) },
+            "Arrows: ${chosen.label.lowercase()} layout…", true, project,
+        ) ?: return
+        // The doc can change during the off-EDT layout; don't clobber a concurrent edit.
+        if (doc.text != text) {
+            arrowsNotify(project, "The file changed during layout; run it again to apply.", NotificationType.WARNING)
+            return
+        }
+        if (next != text) {
+            WriteCommandAction.runWriteCommandAction(project) { doc.setText(next) }
+            arrowsNotify(project, "Applied ${chosen.label.lowercase()} layout.")
         }
     }
 
     private fun withCypherClause(then: (String) -> Unit) {
         ApplicationManager.getApplication().invokeLater {
-            val clause = Messages.showEditableChooseDialog(
-                "Cypher clause", "Cypher", null,
-                CYPHER_CLAUSES.toTypedArray(), CYPHER_CLAUSES.first(), null,
-            ) ?: return@invokeLater
-            then(clause)
+            chooseInPopup(component, "Cypher clause", CYPHER_CLAUSES, CYPHER_CLAUSES.first(), { it }, then)
         }
     }
 
@@ -292,15 +290,18 @@ class ArrowsFileEditor(
                 arrowsNotify(project, "No ${noun}s in this graph.")
                 return@invokeLater
             }
-            val old = Messages.showEditableChooseDialog(
-                "$noun to rename", title, null, options.toTypedArray(), options.first(), null,
-            ) ?: return@invokeLater
-            val new = Messages.showInputDialog(project, "Rename \"$old\" to", title, null, old, null)
-                ?.trim()?.takeIf { it.isNotEmpty() && it != old } ?: return@invokeLater
-            val next = rewrite(text, old, new)
-            if (next != text) {
-                WriteCommandAction.runWriteCommandAction(project) { doc.setText(next) }
-                arrowsNotify(project, "Renamed \"$old\" to \"$new\".")
+            chooseInPopup(component, "$noun to rename", options, options.first(), { it }) { old ->
+                val new = Messages.showInputDialog(project, "Rename \"$old\" to", title, null, old, null)
+                    ?.trim()?.takeIf { it.isNotEmpty() && it != old } ?: return@chooseInPopup
+                if (doc.text != text) {
+                    arrowsNotify(project, "The file changed; run rename again.", NotificationType.WARNING)
+                    return@chooseInPopup
+                }
+                val next = rewrite(text, old, new)
+                if (next != text) {
+                    WriteCommandAction.runWriteCommandAction(project) { doc.setText(next) }
+                    arrowsNotify(project, "Renamed \"$old\" to \"$new\".")
+                }
             }
         }
     }

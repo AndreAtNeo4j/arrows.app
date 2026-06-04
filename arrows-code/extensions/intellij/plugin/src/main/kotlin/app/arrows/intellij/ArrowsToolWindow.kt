@@ -134,11 +134,7 @@ private class ArrowsToolWindowPanel(private val project: Project) : SimpleToolWi
             ?: """{"nodes":[],"relationships":[],"style":{}}"""
 
     private fun newFromExample() {
-        val choice = Messages.showEditableChooseDialog(
-            "Pick an example to copy into your workspace", "New From Example", null,
-            EXAMPLE_NAMES.toTypedArray(), EXAMPLE_NAMES.first(), null
-        ) ?: return
-        useExampleAsTemplate(choice)
+        chooseInPopup(tree, "New From Example", EXAMPLE_NAMES, EXAMPLE_NAMES.first(), { it }) { useExampleAsTemplate(it) }
     }
 
     private fun importSharedGraph() {
