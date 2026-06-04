@@ -27,6 +27,7 @@ import com.intellij.ui.DoubleClickListener
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.treeStructure.Tree
+import javax.swing.Icon
 import javax.swing.JTree
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.DefaultTreeModel
@@ -54,8 +55,8 @@ class ArrowsToolWindowFactory : ToolWindowFactory, DumbAware {
 }
 
 private sealed interface Node {
-    data class Section(val label: String) : Node
-    data class Action(val label: String, val run: () -> Unit) : Node
+    data class Section(val label: String, val icon: Icon) : Node
+    data class Action(val label: String, val icon: Icon, val run: () -> Unit) : Node
     data class FileEntry(val file: VirtualFile) : Node
     data class Example(val name: String) : Node
     data class Empty(val label: String) : Node
@@ -89,23 +90,23 @@ private class ArrowsToolWindowPanel(private val project: Project) : SimpleToolWi
 
     fun refresh() {
         root.removeAllChildren()
-        root.add(section("Quick actions", listOf(
-            Node.Action("New graph") { newGraph() },
-            Node.Action("New from example…") { newFromExample() },
-            Node.Action("Import shared graph…") { importSharedGraph() },
+        root.add(section("Quick actions", AllIcons.Nodes.Folder, listOf(
+            Node.Action("New graph", AllIcons.General.Add) { newGraph() },
+            Node.Action("New from example…", AllIcons.Nodes.PpLib) { newFromExample() },
+            Node.Action("Import shared graph…", AllIcons.Actions.Download) { importSharedGraph() },
         )))
         val files = workspaceArrowsFiles(project)
-        root.add(section("In this workspace",
+        root.add(section("In this workspace", AllIcons.Nodes.Folder,
             if (files.isEmpty()) listOf(Node.Empty("No .arrows files yet — try New graph"))
             else files.map { Node.FileEntry(it) }
         ))
-        root.add(section("Examples", EXAMPLE_NAMES.map { Node.Example(it) }))
+        root.add(section("Examples", AllIcons.Nodes.PpLib, EXAMPLE_NAMES.map { Node.Example(it) }))
         model.reload()
         com.intellij.util.ui.tree.TreeUtil.expandAll(tree)
     }
 
-    private fun section(label: String, children: List<Node>): DefaultMutableTreeNode {
-        val node = DefaultMutableTreeNode(Node.Section(label))
+    private fun section(label: String, icon: Icon, children: List<Node>): DefaultMutableTreeNode {
+        val node = DefaultMutableTreeNode(Node.Section(label, icon))
         children.forEach { node.add(DefaultMutableTreeNode(it)) }
         return node
     }
@@ -192,8 +193,8 @@ private class ArrowsCellRenderer : ColoredTreeCellRenderer() {
         leaf: Boolean, row: Int, hasFocus: Boolean,
     ) {
         when (val node = (value as? DefaultMutableTreeNode)?.userObject) {
-            is Node.Section -> { icon = AllIcons.Nodes.Folder; append(node.label, SimpleTextAttributes.REGULAR_BOLD_ATTRIBUTES) }
-            is Node.Action -> { icon = AllIcons.General.Add; append(node.label) }
+            is Node.Section -> { icon = node.icon; append(node.label, SimpleTextAttributes.REGULAR_BOLD_ATTRIBUTES) }
+            is Node.Action -> { icon = node.icon; append(node.label) }
             is Node.FileEntry -> { icon = ArrowsFileType.icon; append(node.file.name) }
             is Node.Example -> { icon = ArrowsFileType.icon; append(node.name); append("  bundled", SimpleTextAttributes.GRAYED_ATTRIBUTES) }
             is Node.Empty -> { icon = AllIcons.General.Information; append(node.label, SimpleTextAttributes.GRAYED_ATTRIBUTES) }
