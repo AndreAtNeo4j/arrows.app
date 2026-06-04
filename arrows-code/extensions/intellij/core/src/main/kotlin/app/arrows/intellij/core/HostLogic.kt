@@ -5,7 +5,6 @@ import java.net.URI
 import java.net.URLEncoder
 import java.util.Base64
 
-// open-external: same allowlist as the VS Code host (commands/file.ts).
 val ALLOWED_EXTERNAL_HOSTS = setOf(
     "neo4j.com", "feedback.neo4j.com", "www.youtube.com", "youtube.com", "github.com",
 )
@@ -15,7 +14,6 @@ fun isAllowedExternalUrl(url: String): Boolean {
     return uri.scheme?.lowercase() == "https" && uri.userInfo == null && uri.host in ALLOWED_EXTERNAL_HOSTS
 }
 
-// "Watch tutorial" target (mirrors VS Code's TUTORIAL_URL in commands/file.ts).
 const val TUTORIAL_URL = "https://www.youtube.com/watch?v=ZHJ-BrKJ8A4"
 
 fun arrowsAppImportUrl(graphJson: String): String {
@@ -23,7 +21,7 @@ fun arrowsAppImportUrl(graphJson: String): String {
     return "https://arrows.app/#/import/json=" + URLEncoder.encode(b64, "UTF-8")
 }
 
-// Browsers reject very long URLs; warn past this (mirrors VS Code's ARROWS_APP_URL_WARN_BYTES).
+// Browsers reject very long URLs; warn past this.
 const val ARROWS_APP_URL_WARN_BYTES = 20_000
 
 fun arrowsAppShare(graphJson: String): Pair<String, Boolean>? {
@@ -31,14 +29,12 @@ fun arrowsAppShare(graphJson: String): Pair<String, Boolean>? {
     return arrowsAppImportUrl(compact) to (compact.length > ARROWS_APP_URL_WARN_BYTES)
 }
 
-// Workspace scan: generated/output trees that hold copies of .arrows files.
 val GENERATED_DIRS = setOf(
     "node_modules", "build", "dist", "out", "target", ".gradle", ".idea", ".vscode-test", "coverage", "media",
 )
 
 fun isGeneratedPath(path: String): Boolean = path.split('/').any { it in GENERATED_DIRS }
 
-// Cypher export clause choices (mirrors the VS Code cypherClause.ts).
 val CYPHER_CLAUSES = listOf("CREATE", "MATCH", "MERGE")
 
 // URI.path decodes once; a residual '%' means double-encoding (e.g. %252e%252e) - reject.

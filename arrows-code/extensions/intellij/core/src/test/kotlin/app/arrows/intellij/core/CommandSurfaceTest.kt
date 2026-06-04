@@ -40,10 +40,7 @@ class CommandSurfaceTest {
         )
     }
 
-    // The kebab advertises only commands the JVM host can service: validate/format
-    // (graph-logic) and openSource (needs a 2nd editor) are dropped; rename is kept.
-    // Only openSource (needs a 2nd editor) stays dropped; validate/format/rename are reimplemented
-    // in Kotlin, so they survive the filter in catalog order.
+    // openSource is the only kebab command dropped (2-editor NPE); the rest are serviceable.
     @Test
     fun supportedEmbedMenuDropsCommandsTheHostCannotRun() {
         val json = javaClass.getResourceAsStream("/commands.json")!!.bufferedReader().use { it.readText() }

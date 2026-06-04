@@ -4,8 +4,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-// Mirrors graph-logic/validator/structural.spec.ts for the checks the Kotlin host implements
-// (duplicate ids, ref integrity, required fields). Style-key validation is VS-Code-only.
+// Covers the three checks the Kotlin host implements; style-key validation is VS-Code-only.
 class GraphValidateTest {
     private fun codes(json: String) = validateGraph(json).map { it.code }
 

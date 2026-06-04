@@ -9,12 +9,9 @@ import kotlin.math.min
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-// Layout algorithms ported from graph-logic/src/layout/*.ts (the TS lib can't run on the JVM).
-// Positions only; every other node/graph field is preserved. Output rounded to 1dp for stable diffs.
-
 data class LayoutOption(val id: String, val label: String, val description: String)
 
-// Order = order shown in the picker; force first = default.
+// Order = picker order; first = default.
 val LAYOUTS = listOf(
     LayoutOption("force", "Force-directed", "Organic spring layout. Good default."),
     LayoutOption("hierarchical", "Hierarchical", "Top-down layers. Best for DAGs and tier shapes."),
@@ -41,7 +38,6 @@ private fun nodeInfo(o: JSONObject): NodeInfo {
     return NodeInfo(o.optString("id"), x, y, NODE_BODY_RADIUS + (labelLines + propLines + captionExtra) * LABEL_LINE_HEIGHT)
 }
 
-/** Run [layoutId] over the graph JSON and return it with node positions rewritten; null if unparseable or unknown layout. */
 fun layoutGraph(json: String, layoutId: String): String? {
     val root = runCatching { JSONObject(json) }.getOrNull() ?: return null
     val nodesArr = root.optJSONArray("nodes") ?: return null
@@ -157,7 +153,7 @@ private fun radial(infos: List<NodeInfo>, rels: List<Pair<String, String>>): Map
 private const val HIER_LAYER_HEIGHT = 280.0
 private const val HIER_NODE_SPACING = 340.0
 
-// Sugiyama-style layered drawing via Kahn topo sort; cyclic-safe (back-edges ignored, pure-cycle nodes land in a leftover layer).
+// Kahn topo sort; cyclic-safe — back-edges ignored, pure-cycle nodes land in a leftover layer.
 private fun hierarchical(infos: List<NodeInfo>, rels: List<Pair<String, String>>): Map<String, XY> {
     val ids = infos.map { it.id }.sorted()
     val idSet = ids.toHashSet()
@@ -217,7 +213,6 @@ private const val FD_ITERATIONS = 420
 
 private class Body(val id: String, var x: Double, var y: Double, val r: Double) { var vx = 0.0; var vy = 0.0 }
 
-// Fruchterman-Reingold spring/repulsion with a collision-relaxation pass per step.
 private fun forceDirected(infos: List<NodeInfo>, rels: List<Pair<String, String>>): Map<String, XY> {
     if (infos.size == 1) return mapOf(infos[0].id to XY(0.0, 0.0))
     val sim = infos.sortedBy { it.id }.map { Body(it.id, it.x, it.y, it.radius) }

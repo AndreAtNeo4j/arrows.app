@@ -55,7 +55,6 @@ import java.util.concurrent.CompletableFuture
 import javax.swing.JComponent
 import javax.swing.JLabel
 
-// The arrows canvas in a JCEF editor tab. Transport only — feature logic lives in the embed bundle.
 class ArrowsFileEditor(
     private val project: Project,
     private val file: VirtualFile,
@@ -181,7 +180,6 @@ class ArrowsFileEditor(
 
     override fun onGraphChanged(graph: GraphPayload, docVersion: Long?) {
         val doc = document ?: return
-        // Write back verbatim to preserve style and top-level fields.
         val nextText = try { JSONObject(graph.raw).toString(2) } catch (e: JSONException) {
             thisLogger().warn("arrows: graph-changed payload didn't serialize; not written", e); return
         }
@@ -214,8 +212,7 @@ class ArrowsFileEditor(
         }
     }
 
-    // Structural checks only (IDs, refs, required fields); the style-key check is VS-Code-only.
-    // No Problems-panel binding for a JCEF file, so issues surface in a dialog.
+    // A JCEF file has no Problems-panel binding, so issues surface in a dialog.
     private fun validate() {
         ApplicationManager.getApplication().invokeLater {
             val text = document?.text ?: return@invokeLater
@@ -235,8 +232,7 @@ class ArrowsFileEditor(
         }
     }
 
-    // Auto-arrange node positions with one of the bundled layouts. The layout itself is pure and
-    // can be O(n^2) (force-directed), so it runs off the EDT under a cancellable progress dialog.
+    // Force-directed is O(n^2); run the layout off the EDT under a cancellable progress dialog.
     private fun format() {
         ApplicationManager.getApplication().invokeLater {
             val doc = document ?: return@invokeLater
@@ -271,7 +267,6 @@ class ArrowsFileEditor(
         }
     }
 
-    // Rename a label / relationship type everywhere — a plain JSON edit (no graph-logic).
     private fun renameIn(
         title: String,
         noun: String,

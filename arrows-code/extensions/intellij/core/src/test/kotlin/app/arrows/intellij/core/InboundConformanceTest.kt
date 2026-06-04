@@ -5,10 +5,7 @@ import org.json.JSONObject
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-/**
- * Asserts the Kotlin parser against the same fixtures the TypeScript host uses
- * (messages/fixtures/inbound-messages.json). If the two parsers drift, this fails.
- */
+// Runs the Kotlin parser against the shared TS fixtures (messages/fixtures); fails if the two parsers drift.
 class InboundConformanceTest {
     private fun coerce(o: JSONObject): Map<String, Any?> =
         o.keys().asSequence().associateWith { k ->

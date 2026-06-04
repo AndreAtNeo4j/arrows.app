@@ -6,8 +6,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-// Mirrors graph-logic/src/layout/layouts.spec.ts. Exact float parity with TS isn't required
-// (different sort/rounding paths); these assert the structural properties each layout guarantees.
+// Asserts the structural properties each layout guarantees, not exact coordinates (TS float parity isn't required).
 class GraphLayoutTest {
     private val ids = LAYOUTS.map { it.id }
 

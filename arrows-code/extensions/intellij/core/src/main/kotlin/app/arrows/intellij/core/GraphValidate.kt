@@ -3,16 +3,14 @@ package app.arrows.intellij.core
 import org.json.JSONArray
 import org.json.JSONObject
 
-// Structural .arrows validation, reimplemented in Kotlin (the TS graph-logic can't be shared).
-// Mirrors graph-logic/validator/structural.ts — the three vocabulary-free checks. The style-key
-// check is VS-Code-only: it needs the @neo4j-arrows/model style vocabulary, which stays
-// single-sourced in the bundle rather than hand-copied here.
+// The style-key check is VS-Code-only: it needs the @neo4j-arrows/model style vocabulary, which
+// stays single-sourced in the bundle rather than hand-copied here.
 
 enum class Severity { ERROR, WARNING }
 
 data class Diagnostic(val severity: Severity, val code: String, val message: String)
 
-// Match graph-logic/validator/types.ts CODES so a diagnostic means the same thing in both hosts.
+// Same codes as graph-logic/validator/types.ts — a diagnostic means the same in both hosts.
 const val CODE_REF_INTEGRITY = "structural.ref-integrity"
 const val CODE_DUPLICATE_ID = "structural.duplicate-id"
 const val CODE_EMPTY_REQUIRED = "structural.empty-required-field"

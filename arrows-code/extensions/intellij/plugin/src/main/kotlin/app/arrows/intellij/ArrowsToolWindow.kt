@@ -32,7 +32,6 @@ import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.DefaultTreeModel
 import javax.swing.tree.TreeSelectionModel
 
-// Bundled under plugin resources /examples/ (copied from fixtures/examples at build time).
 private val EXAMPLE_NAMES = listOf(
     "citations", "iam-rbac", "lexical-graph", "microservices", "order-lifecycle", "social",
 )
@@ -43,7 +42,6 @@ class ArrowsToolWindowFactory : ToolWindowFactory, DumbAware {
         toolWindow.contentManager.addContent(
             com.intellij.ui.content.ContentFactory.getInstance().createContent(panel, "", false)
         )
-        // Auto-refresh on .arrows create/delete, like the VS Code file watcher.
         project.messageBus.connect(toolWindow.disposable).subscribe(
             VirtualFileManager.VFS_CHANGES,
             object : BulkFileListener {
@@ -205,8 +203,7 @@ private class ArrowsCellRenderer : ColoredTreeCellRenderer() {
 }
 
 internal fun workspaceArrowsFiles(project: Project): List<VirtualFile> {
-    // iterateContent already skips IDE-excluded roots; isGeneratedPath also drops
-    // build/output copies a plainly-opened project hasn't marked, so each file shows once.
+    // isGeneratedPath on top of iterateContent drops build/output copies an unmarked project keeps.
     val result = mutableListOf<VirtualFile>()
     ProjectFileIndex.getInstance(project).iterateContent { vf ->
         if (!vf.isDirectory && vf.extension == "arrows" && !isGeneratedPath(vf.path)) {
