@@ -30,7 +30,7 @@ Open the **Arrows** tool window on the left and choose **New graph** (or open an
 - Drag from a node's ring to draw a relationship.
 - Double-click empty space to add a node.
 - Right-click anything for the relevant menu.
-- Use the kebab (**⋮**) menu in the toolbar for export, rename, and open-in-arrows.app.
+- Use the kebab (**⋮**) menu in the toolbar for export, auto-arrange, validate, rename, and open-in-arrows.app.
 
 Press **`?`** inside the canvas to see all shortcuts.
 

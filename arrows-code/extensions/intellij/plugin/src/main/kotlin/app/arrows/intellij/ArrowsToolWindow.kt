@@ -79,7 +79,7 @@ private class ArrowsToolWindowPanel(private val project: Project) : SimpleToolWi
         }.installOn(tree)
 
         val actions = DefaultActionGroup().apply {
-            add(simpleAction("New Graph", AllIcons.General.Add) { newGraph() })
+            add(simpleAction("New graph", AllIcons.General.Add) { newGraph() })
             add(simpleAction("Refresh", AllIcons.Actions.Refresh) { refresh() })
         }
         val bar = ActionManager.getInstance().createActionToolbar("ArrowsSidebar", actions, true)
@@ -134,11 +134,11 @@ private class ArrowsToolWindowPanel(private val project: Project) : SimpleToolWi
             ?: """{"nodes":[],"relationships":[],"style":{}}"""
 
     private fun newFromExample() {
-        chooseInPopup(project, "New From Example", EXAMPLE_NAMES, EXAMPLE_NAMES.first(), { it }) { useExampleAsTemplate(it) }
+        chooseInPopup(project, "New from example", EXAMPLE_NAMES, EXAMPLE_NAMES.first(), { it }) { useExampleAsTemplate(it) }
     }
 
     private fun importSharedGraph() {
-        val input = Messages.showInputDialog(project, "Paste an arrows.app share URL or graph JSON", "Import Shared Graph", null)
+        val input = Messages.showInputDialog(project, "Paste an arrows.app share URL or graph JSON", "Import shared graph", null)
             ?.takeIf { it.isNotBlank() } ?: return
         val graphJson = parseImportInput(input) ?: run {
             arrowsNotify(project, "Couldn't read an arrows graph from that input.", NotificationType.ERROR)

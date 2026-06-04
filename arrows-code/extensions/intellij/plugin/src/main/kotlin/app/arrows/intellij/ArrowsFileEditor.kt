@@ -158,7 +158,7 @@ class ArrowsFileEditor(
                     .createSaveFileDialog(descriptor, project)
                     .save(file.parent, "${file.nameWithoutExtension}.$ext") ?: return@invokeLater
                 wrapper.file.writeText(result)
-                arrowsNotify(project, "Saved ${wrapper.file.name}")
+                arrowsNotify(project, "Saved ${wrapper.file.name}.")
             }
         }
     }
@@ -209,8 +209,8 @@ class ArrowsFileEditor(
             "arrows.exportGraphQL" -> export("graphql", null, "graphql", "GraphQL")
             "arrows.exportCypher" -> withCypherClause { export("cypher", JSONObject().put("keyword", it), "cypher", "Cypher") }
             "arrows.copyCypher" -> withCypherClause { copyCypher(it) }
-            "arrows.renameLabel" -> renameIn("Rename Label", "label", ::labelsInGraph, ::renameLabelInGraph)
-            "arrows.renameRelType" -> renameIn("Rename Relationship Type", "relationship type", ::relTypesInGraph, ::renameRelTypeInGraph)
+            "arrows.renameLabel" -> renameIn("Rename label", "label", ::labelsInGraph, ::renameLabelInGraph)
+            "arrows.renameRelType" -> renameIn("Rename relationship type", "relationship type", ::relTypesInGraph, ::renameRelTypeInGraph)
             else -> thisLogger().warn("arrows: unhandled embed command '$name'")
         }
     }
@@ -234,7 +234,7 @@ class ArrowsFileEditor(
             val shown = issues.take(VALIDATE_MAX_SHOWN).joinToString("\n") { "• ${it.message}" }
             val more = issues.size - VALIDATE_MAX_SHOWN
             val body = if (more > 0) "$shown\n…and $more more" else shown
-            Messages.showWarningDialog(project, body, "Validate Graph — ${issues.size} issue(s)")
+            Messages.showWarningDialog(project, body, "Validate graph — ${issues.size} issue(s)")
         }
     }
 
@@ -245,7 +245,7 @@ class ArrowsFileEditor(
             if (!parsesOrWarn(text, "Cannot lay out: this graph doesn't parse cleanly.")) return@invokeLater
             val props = PropertiesComponent.getInstance()
             val preselect = LAYOUTS.firstOrNull { it.id == props.getValue(LAST_LAYOUT_KEY) } ?: LAYOUTS.first()
-            chooseInPopup(project, "Auto-arrange Nodes", LAYOUTS, preselect, { "${it.label} — ${it.description}" }) { chosen ->
+            chooseInPopup(project, "Auto-arrange nodes", LAYOUTS, preselect, { "${it.label} — ${it.description}" }) { chosen ->
                 props.setValue(LAST_LAYOUT_KEY, chosen.id)
                 runLayout(doc, text, chosen)
             }
@@ -290,7 +290,7 @@ class ArrowsFileEditor(
                 arrowsNotify(project, "No ${noun}s in this graph.")
                 return@invokeLater
             }
-            chooseInPopup(project, "$noun to rename", options, options.first(), { it }) { old ->
+            chooseInPopup(project, "Select $noun to rename", options, options.first(), { it }) { old ->
                 val new = Messages.showInputDialog(project, "Rename \"$old\" to", title, null, old, null)
                     ?.trim()?.takeIf { it.isNotEmpty() && it != old } ?: return@chooseInPopup
                 if (doc.text != text) {
