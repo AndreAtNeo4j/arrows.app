@@ -68,6 +68,22 @@ class GraphValidateTest {
     }
 
     @Test
+    fun flagsRelationshipMissingFromIdOrToId() {
+        val missingFrom = """{"nodes":[{"id":"n0","position":{"x":0,"y":0}}],"relationships":[{"id":"r0","fromId":"","toId":"n0","type":"R"}]}"""
+        assertTrue(CODE_EMPTY_REQUIRED in codes(missingFrom))
+        val missingTo = """{"nodes":[{"id":"n0","position":{"x":0,"y":0}}],"relationships":[{"id":"r0","fromId":"n0","toId":"","type":"R"}]}"""
+        assertTrue(CODE_EMPTY_REQUIRED in codes(missingTo))
+    }
+
+    @Test
+    fun allStructuralDiagnosticsAreErrors() {
+        val g = """{"nodes":[{"id":"dup","position":{"x":0,"y":0}},{"id":"dup"}],"relationships":[{"id":"r0","fromId":"x","toId":"y","type":"R"}]}"""
+        val diags = validateGraph(g)
+        assertTrue(diags.isNotEmpty())
+        assertTrue(diags.all { it.severity == Severity.ERROR })
+    }
+
+    @Test
     fun acceptsSelfLoops() {
         val g = """{"nodes":[{"id":"n0","position":{"x":0,"y":0}}],"relationships":[
             {"id":"r0","fromId":"n0","toId":"n0","type":"CONNECTS"}

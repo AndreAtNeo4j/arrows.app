@@ -243,16 +243,21 @@ class ArrowsFileEditor(
             }
             val labels = LAYOUTS.map { it.label }.toTypedArray()
             val props = PropertiesComponent.getInstance()
-            val last = props.getValue(LAST_LAYOUT_KEY)?.takeIf { it in labels } ?: labels.first()
+            val lastLabel = LAYOUTS.firstOrNull { it.id == props.getValue(LAST_LAYOUT_KEY) }?.label ?: labels.first()
             val chosen = Messages.showEditableChooseDialog(
-                "Pick a layout algorithm", "Auto-arrange Nodes", null, labels, last, null,
+                "Pick a layout algorithm", "Auto-arrange Nodes", null, labels, lastLabel, null,
             )?.let { picked -> LAYOUTS.firstOrNull { it.label == picked } } ?: return@invokeLater
-            props.setValue(LAST_LAYOUT_KEY, chosen.label)
+            props.setValue(LAST_LAYOUT_KEY, chosen.id)
 
             val next = ProgressManager.getInstance().runProcessWithProgressSynchronously<String?, RuntimeException>(
                 { layoutGraph(text, chosen.id) },
                 "Arrows: ${chosen.label.lowercase()} layout…", true, project,
             ) ?: return@invokeLater
+            // The doc can change during the off-EDT layout; don't clobber a concurrent edit.
+            if (doc.text != text) {
+                Messages.showWarningDialog(project, "The file changed during layout; run it again to apply.", "Auto-arrange Nodes")
+                return@invokeLater
+            }
             if (next != text) WriteCommandAction.runWriteCommandAction(project) { doc.setText(next) }
         }
     }

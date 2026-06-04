@@ -149,4 +149,26 @@ class GraphLayoutTest {
         val xs = (0 until 9).map { pos(out, "n$it").first }.toSet()
         assertEquals(3, xs.size)
     }
+
+    @Test
+    fun everyLayoutRewritesNodePositions() {
+        val g = graph(listOf(node("a", 5000, 5000), node("b", 5100, 5000)), listOf(Triple("r0", "a", "b")))
+        for (id in ids) {
+            val out = layoutGraph(g, id)!!
+            assertTrue(pos(out, "a") != (5000.0 to 5000.0), "layout $id left a unmoved")
+            assertTrue(pos(out, "b") != (5100.0 to 5000.0), "layout $id left b unmoved")
+        }
+    }
+
+    @Test
+    fun radialCrowdedRingKeepsAdjacentLeavesApart() {
+        val leaves = (0 until 24).map { "l$it" }
+        val rels = leaves.mapIndexed { i, l -> Triple("e$i", "hub", l) }
+        val out = layoutGraph(graph(listOf(node("hub")) + leaves.map { node(it) }, rels), "radial")!!
+        val pts = leaves.map { pos(out, it) }.sortedBy { kotlin.math.atan2(it.second, it.first) }
+        for (i in pts.indices) {
+            val a = pts[i]; val b = pts[(i + 1) % pts.size]
+            assertTrue(hypot(a.first - b.first, a.second - b.second) >= 199, "leaves too close on the ring")
+        }
+    }
 }
