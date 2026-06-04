@@ -1,13 +1,13 @@
 package app.arrows.intellij
 
-import com.intellij.ide.DataManager
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.ui.SimpleListCellRenderer
-import javax.swing.JComponent
 
-// Native list popup (type-to-filter, in-context) — the friendlier counterpart to a modal chooser dialog.
+// Native list popup (type-to-filter) — the friendlier counterpart to a modal chooser dialog. Centered
+// in the IDE window: these are triggered from the in-webview kebab, which has no caret to anchor to.
 internal fun <T : Any> chooseInPopup(
-    anchor: JComponent,
+    project: Project,
     title: String,
     items: List<T>,
     preselect: T? = null,
@@ -23,5 +23,5 @@ internal fun <T : Any> chooseInPopup(
         .apply { if (preselect != null) setSelectedValue(preselect, true) }
         .setItemChosenCallback(onChosen)
         .createPopup()
-        .showInBestPositionFor(DataManager.getInstance().getDataContext(anchor))
+        .showCenteredInCurrentWindow(project)
 }

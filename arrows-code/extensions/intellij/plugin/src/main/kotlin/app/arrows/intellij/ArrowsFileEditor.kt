@@ -245,7 +245,7 @@ class ArrowsFileEditor(
             if (!parsesOrWarn(text, "Cannot lay out: this graph doesn't parse cleanly.")) return@invokeLater
             val props = PropertiesComponent.getInstance()
             val preselect = LAYOUTS.firstOrNull { it.id == props.getValue(LAST_LAYOUT_KEY) } ?: LAYOUTS.first()
-            chooseInPopup(component, "Auto-arrange Nodes", LAYOUTS, preselect, { "${it.label} — ${it.description}" }) { chosen ->
+            chooseInPopup(project, "Auto-arrange Nodes", LAYOUTS, preselect, { "${it.label} — ${it.description}" }) { chosen ->
                 props.setValue(LAST_LAYOUT_KEY, chosen.id)
                 runLayout(doc, text, chosen)
             }
@@ -271,7 +271,7 @@ class ArrowsFileEditor(
 
     private fun withCypherClause(then: (String) -> Unit) {
         ApplicationManager.getApplication().invokeLater {
-            chooseInPopup(component, "Cypher clause", CYPHER_CLAUSES, CYPHER_CLAUSES.first(), { it }, then)
+            chooseInPopup(project, "Cypher clause", CYPHER_CLAUSES, CYPHER_CLAUSES.first(), { it }, then)
         }
     }
 
@@ -290,7 +290,7 @@ class ArrowsFileEditor(
                 arrowsNotify(project, "No ${noun}s in this graph.")
                 return@invokeLater
             }
-            chooseInPopup(component, "$noun to rename", options, options.first(), { it }) { old ->
+            chooseInPopup(project, "$noun to rename", options, options.first(), { it }) { old ->
                 val new = Messages.showInputDialog(project, "Rename \"$old\" to", title, null, old, null)
                     ?.trim()?.takeIf { it.isNotEmpty() && it != old } ?: return@chooseInPopup
                 if (doc.text != text) {
