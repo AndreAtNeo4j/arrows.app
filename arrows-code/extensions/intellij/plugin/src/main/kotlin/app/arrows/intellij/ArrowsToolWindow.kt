@@ -181,7 +181,7 @@ private class ArrowsToolWindowPanel(private val project: Project) : SimpleToolWi
         refresh()
     }
 
-    private fun simpleAction(text: String, icon: javax.swing.Icon, run: () -> Unit) =
+    private fun simpleAction(text: String, icon: Icon, run: () -> Unit) =
         object : AnAction(text, text, icon), DumbAware {
             override fun actionPerformed(e: AnActionEvent) = run()
         }

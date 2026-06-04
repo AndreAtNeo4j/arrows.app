@@ -212,14 +212,17 @@ class ArrowsFileEditor(
         }
     }
 
+    private fun parsesOrWarn(text: String, title: String, message: String = "This graph doesn't parse cleanly."): Boolean {
+        if (runCatching { JSONObject(text) }.isSuccess) return true
+        Messages.showWarningDialog(project, message, title)
+        return false
+    }
+
     // A JCEF file has no Problems-panel binding, so issues surface in a dialog.
     private fun validate() {
         ApplicationManager.getApplication().invokeLater {
             val text = document?.text ?: return@invokeLater
-            if (runCatching { JSONObject(text) }.isFailure) {
-                Messages.showWarningDialog(project, "This graph doesn't parse cleanly.", "Validate Graph")
-                return@invokeLater
-            }
+            if (!parsesOrWarn(text, "Validate Graph")) return@invokeLater
             val issues = validateGraph(text)
             if (issues.isEmpty()) {
                 Messages.showInfoMessage(project, "No structural issues found.", "Validate Graph")
@@ -237,10 +240,7 @@ class ArrowsFileEditor(
         ApplicationManager.getApplication().invokeLater {
             val doc = document ?: return@invokeLater
             val text = doc.text
-            if (runCatching { JSONObject(text) }.isFailure) {
-                Messages.showWarningDialog(project, "Cannot lay out: this graph doesn't parse cleanly.", "Auto-arrange Nodes")
-                return@invokeLater
-            }
+            if (!parsesOrWarn(text, "Auto-arrange Nodes", "Cannot lay out: this graph doesn't parse cleanly.")) return@invokeLater
             val labels = LAYOUTS.map { it.label }.toTypedArray()
             val props = PropertiesComponent.getInstance()
             val lastLabel = LAYOUTS.firstOrNull { it.id == props.getValue(LAST_LAYOUT_KEY) }?.label ?: labels.first()
@@ -281,10 +281,7 @@ class ArrowsFileEditor(
         ApplicationManager.getApplication().invokeLater {
             val doc = document ?: return@invokeLater
             val text = doc.text
-            if (runCatching { JSONObject(text) }.isFailure) {
-                Messages.showWarningDialog(project, "This graph doesn't parse cleanly.", title)
-                return@invokeLater
-            }
+            if (!parsesOrWarn(text, title)) return@invokeLater
             val options = values(text)
             if (options.isEmpty()) {
                 Messages.showInfoMessage(project, "No ${noun}s in this graph.", title)
