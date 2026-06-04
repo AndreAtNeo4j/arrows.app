@@ -8,6 +8,7 @@ The arrows.app canvas, inside a JetBrains IDE. Open a `.arrows` file and you get
 - Cypher export (copy to clipboard or save), SVG export, GraphQL-schema export
 - Open the current graph in arrows.app, or import one from an arrows.app share link
 - Project-wide rename for labels and relationship types
+- Validate graph structure (duplicate ids, broken references, missing required fields)
 - Sidebar with your workspace's `.arrows` files plus six bundled examples
 
 ## Install

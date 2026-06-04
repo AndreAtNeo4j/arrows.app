@@ -42,12 +42,14 @@ class CommandSurfaceTest {
 
     // The kebab advertises only commands the JVM host can service: validate/format
     // (graph-logic) and openSource (needs a 2nd editor) are dropped; rename is kept.
+    // format (5 TS layout algorithms) and openSource (needs a 2nd editor) stay dropped; validate
+    // is implemented in Kotlin (structural checks), so it survives the filter in catalog order.
     @Test
     fun supportedEmbedMenuDropsCommandsTheHostCannotRun() {
         val json = javaClass.getResourceAsStream("/commands.json")!!.bufferedReader().use { it.readText() }
         assertEquals(
             listOf(
-                "arrows.copyCypher", "arrows.exportCypher", "arrows.exportSvg",
+                "arrows.validate", "arrows.copyCypher", "arrows.exportCypher", "arrows.exportSvg",
                 "arrows.exportGraphQL", "arrows.openInArrowsApp",
                 "arrows.renameLabel", "arrows.renameRelType",
             ),

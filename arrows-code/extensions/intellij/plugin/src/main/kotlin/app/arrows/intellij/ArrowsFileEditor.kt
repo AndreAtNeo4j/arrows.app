@@ -14,6 +14,7 @@ import app.arrows.intellij.core.relTypesInGraph
 import app.arrows.intellij.core.renameLabelInGraph
 import app.arrows.intellij.core.renameRelTypeInGraph
 import app.arrows.intellij.core.supportedEmbedMenu
+import app.arrows.intellij.core.validateGraph
 import app.arrows.intellij.core.TUTORIAL_URL
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.application.ApplicationManager
@@ -197,6 +198,7 @@ class ArrowsFileEditor(
         when (name) {
             "arrows.openInArrowsApp" -> openInArrowsApp()
             "arrows.openTutorial" -> onOpenExternal(TUTORIAL_URL)
+            "arrows.validate" -> validate()
             "arrows.exportSvg" -> export("svg", null, "svg", "SVG")
             "arrows.exportGraphQL" -> export("graphql", null, "graphql", "GraphQL")
             "arrows.exportCypher" -> withCypherClause { export("cypher", JSONObject().put("keyword", it), "cypher", "Cypher") }
@@ -204,6 +206,27 @@ class ArrowsFileEditor(
             "arrows.renameLabel" -> renameIn("Rename Label", "label", ::labelsInGraph, ::renameLabelInGraph)
             "arrows.renameRelType" -> renameIn("Rename Relationship Type", "relationship type", ::relTypesInGraph, ::renameRelTypeInGraph)
             else -> thisLogger().warn("arrows: unhandled embed command '$name'")
+        }
+    }
+
+    // Structural checks only (IDs, refs, required fields); the style-key check is VS-Code-only.
+    // No Problems-panel binding for a JCEF file, so issues surface in a dialog.
+    private fun validate() {
+        ApplicationManager.getApplication().invokeLater {
+            val text = document?.text ?: return@invokeLater
+            if (runCatching { JSONObject(text) }.isFailure) {
+                Messages.showWarningDialog(project, "This graph doesn't parse cleanly.", "Validate Graph")
+                return@invokeLater
+            }
+            val issues = validateGraph(text)
+            if (issues.isEmpty()) {
+                Messages.showInfoMessage(project, "No structural issues found.", "Validate Graph")
+                return@invokeLater
+            }
+            val shown = issues.take(VALIDATE_MAX_SHOWN).joinToString("\n") { "• ${it.message}" }
+            val more = issues.size - VALIDATE_MAX_SHOWN
+            val body = if (more > 0) "$shown\n…and $more more" else shown
+            Messages.showWarningDialog(project, body, "Validate Graph — ${issues.size} issue(s)")
         }
     }
 
@@ -280,6 +303,7 @@ class ArrowsFileEditor(
     }
 
     private companion object {
+        const val VALIDATE_MAX_SHOWN = 20
         @Volatile private var schemeRegistered = false
 
         fun registerSchemeHandler() {
