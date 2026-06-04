@@ -30,5 +30,6 @@
             extensions="arrows"/>
         <fileEditorProvider implementation="app.arrows.intellij.ArrowsFileEditorProvider"/>
         <toolWindow id="Arrows" anchor="left" icon="/icons/arrows.svg" factoryClass="app.arrows.intellij.ArrowsToolWindowFactory"/>
+        <notificationGroup id="Arrows" displayType="BALLOON"/>
     </extensions>
 </idea-plugin>

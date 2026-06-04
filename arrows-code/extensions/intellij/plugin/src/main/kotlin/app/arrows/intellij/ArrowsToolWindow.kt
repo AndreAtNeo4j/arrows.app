@@ -5,6 +5,7 @@ import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.notification.NotificationType
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.DumbAware
@@ -144,7 +145,7 @@ private class ArrowsToolWindowPanel(private val project: Project) : SimpleToolWi
         val input = Messages.showInputDialog(project, "Paste an arrows.app share URL or graph JSON", "Import Shared Graph", null)
             ?.takeIf { it.isNotBlank() } ?: return
         val graphJson = parseImportInput(input) ?: run {
-            Messages.showErrorDialog(project, "Couldn't read an arrows graph from that input.", "Import Shared Graph")
+            arrowsNotify(project, "Couldn't read an arrows graph from that input.", NotificationType.ERROR)
             return
         }
         val dir = ProjectRootManager.getInstance(project).contentRoots.firstOrNull() ?: return

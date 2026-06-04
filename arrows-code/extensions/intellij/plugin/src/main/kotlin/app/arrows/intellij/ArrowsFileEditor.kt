@@ -20,6 +20,7 @@ import app.arrows.intellij.core.validateGraph
 import app.arrows.intellij.core.TUTORIAL_URL
 import com.intellij.ide.BrowserUtil
 import com.intellij.ide.util.PropertiesComponent
+import com.intellij.notification.NotificationType
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.diagnostic.thisLogger
@@ -148,7 +149,7 @@ class ArrowsFileEditor(
             ApplicationManager.getApplication().invokeLater {
                 if (err != null || result == null) {
                     thisLogger().warn("arrows $label export failed: ${err?.message ?: "no result"}")
-                    Messages.showErrorDialog(project, "Couldn't generate the $label export (the canvas didn't respond).", "Arrows")
+                    arrowsNotify(project, "Couldn't generate the $label export (the canvas didn't respond).", NotificationType.ERROR)
                     return@invokeLater
                 }
                 val descriptor = FileSaverDescriptor("Save $label", "", ext)
@@ -156,6 +157,7 @@ class ArrowsFileEditor(
                     .createSaveFileDialog(descriptor, project)
                     .save(file.parent, "${file.nameWithoutExtension}.$ext") ?: return@invokeLater
                 wrapper.file.writeText(result)
+                arrowsNotify(project, "Saved ${wrapper.file.name}")
             }
         }
     }
@@ -164,7 +166,7 @@ class ArrowsFileEditor(
         ApplicationManager.getApplication().invokeLater {
             val text = document?.text ?: return@invokeLater
             val share = arrowsAppShare(text) ?: run {
-                Messages.showWarningDialog(project, "This graph doesn't parse cleanly; can't open it in arrows.app.", "Open in arrows.app")
+                arrowsNotify(project, "This graph doesn't parse cleanly; can't open it in arrows.app.", NotificationType.WARNING)
                 return@invokeLater
             }
             if (share.second && Messages.showOkCancelDialog(
@@ -212,20 +214,20 @@ class ArrowsFileEditor(
         }
     }
 
-    private fun parsesOrWarn(text: String, title: String, message: String = "This graph doesn't parse cleanly."): Boolean {
+    private fun parsesOrWarn(text: String, message: String = "This graph doesn't parse cleanly."): Boolean {
         if (runCatching { JSONObject(text) }.isSuccess) return true
-        Messages.showWarningDialog(project, message, title)
+        arrowsNotify(project, message, NotificationType.WARNING)
         return false
     }
 
-    // A JCEF file has no Problems-panel binding, so issues surface in a dialog.
+    // A JCEF file has no Problems-panel binding, so the issue list surfaces in a dialog.
     private fun validate() {
         ApplicationManager.getApplication().invokeLater {
             val text = document?.text ?: return@invokeLater
-            if (!parsesOrWarn(text, "Validate Graph")) return@invokeLater
+            if (!parsesOrWarn(text)) return@invokeLater
             val issues = validateGraph(text)
             if (issues.isEmpty()) {
-                Messages.showInfoMessage(project, "No structural issues found.", "Validate Graph")
+                arrowsNotify(project, "No structural issues found.")
                 return@invokeLater
             }
             val shown = issues.take(VALIDATE_MAX_SHOWN).joinToString("\n") { "• ${it.message}" }
@@ -240,7 +242,7 @@ class ArrowsFileEditor(
         ApplicationManager.getApplication().invokeLater {
             val doc = document ?: return@invokeLater
             val text = doc.text
-            if (!parsesOrWarn(text, "Auto-arrange Nodes", "Cannot lay out: this graph doesn't parse cleanly.")) return@invokeLater
+            if (!parsesOrWarn(text, "Cannot lay out: this graph doesn't parse cleanly.")) return@invokeLater
             val labels = LAYOUTS.map { it.label }.toTypedArray()
             val props = PropertiesComponent.getInstance()
             val lastLabel = LAYOUTS.firstOrNull { it.id == props.getValue(LAST_LAYOUT_KEY) }?.label ?: labels.first()
@@ -255,10 +257,13 @@ class ArrowsFileEditor(
             ) ?: return@invokeLater
             // The doc can change during the off-EDT layout; don't clobber a concurrent edit.
             if (doc.text != text) {
-                Messages.showWarningDialog(project, "The file changed during layout; run it again to apply.", "Auto-arrange Nodes")
+                arrowsNotify(project, "The file changed during layout; run it again to apply.", NotificationType.WARNING)
                 return@invokeLater
             }
-            if (next != text) WriteCommandAction.runWriteCommandAction(project) { doc.setText(next) }
+            if (next != text) {
+                WriteCommandAction.runWriteCommandAction(project) { doc.setText(next) }
+                arrowsNotify(project, "Applied ${chosen.label.lowercase()} layout.")
+            }
         }
     }
 
@@ -281,10 +286,10 @@ class ArrowsFileEditor(
         ApplicationManager.getApplication().invokeLater {
             val doc = document ?: return@invokeLater
             val text = doc.text
-            if (!parsesOrWarn(text, title)) return@invokeLater
+            if (!parsesOrWarn(text)) return@invokeLater
             val options = values(text)
             if (options.isEmpty()) {
-                Messages.showInfoMessage(project, "No ${noun}s in this graph.", title)
+                arrowsNotify(project, "No ${noun}s in this graph.")
                 return@invokeLater
             }
             val old = Messages.showEditableChooseDialog(
@@ -293,7 +298,10 @@ class ArrowsFileEditor(
             val new = Messages.showInputDialog(project, "Rename \"$old\" to", title, null, old, null)
                 ?.trim()?.takeIf { it.isNotEmpty() && it != old } ?: return@invokeLater
             val next = rewrite(text, old, new)
-            if (next != text) WriteCommandAction.runWriteCommandAction(project) { doc.setText(next) }
+            if (next != text) {
+                WriteCommandAction.runWriteCommandAction(project) { doc.setText(next) }
+                arrowsNotify(project, "Renamed \"$old\" to \"$new\".")
+            }
         }
     }
 
@@ -302,8 +310,11 @@ class ArrowsFileEditor(
             ApplicationManager.getApplication().invokeLater {
                 if (err != null || result == null) {
                     thisLogger().warn("arrows copy Cypher failed: ${err?.message ?: "no result"}")
-                    Messages.showErrorDialog(project, "Couldn't copy Cypher (the canvas didn't respond).", "Arrows")
-                } else CopyPasteManager.getInstance().setContents(StringSelection(result))
+                    arrowsNotify(project, "Couldn't copy Cypher (the canvas didn't respond).", NotificationType.ERROR)
+                } else {
+                    CopyPasteManager.getInstance().setContents(StringSelection(result))
+                    arrowsNotify(project, "Copied Cypher to clipboard.")
+                }
             }
         }
     }
