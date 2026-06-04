@@ -8,7 +8,9 @@ import app.arrows.intellij.core.CYPHER_CLAUSES
 import app.arrows.intellij.core.arrowsAppShare
 import app.arrows.intellij.core.dispatchInbound
 import app.arrows.intellij.core.isAllowedExternalUrl
+import app.arrows.intellij.core.LAYOUTS
 import app.arrows.intellij.core.labelsInGraph
+import app.arrows.intellij.core.layoutGraph
 import app.arrows.intellij.core.parseCommandMenu
 import app.arrows.intellij.core.relTypesInGraph
 import app.arrows.intellij.core.renameLabelInGraph
@@ -17,9 +19,11 @@ import app.arrows.intellij.core.supportedEmbedMenu
 import app.arrows.intellij.core.validateGraph
 import app.arrows.intellij.core.TUTORIAL_URL
 import com.intellij.ide.BrowserUtil
+import com.intellij.ide.util.PropertiesComponent
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.diagnostic.thisLogger
+import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.fileChooser.FileChooserFactory
 import com.intellij.openapi.fileChooser.FileSaverDescriptor
 import com.intellij.openapi.editor.Document
@@ -199,6 +203,7 @@ class ArrowsFileEditor(
             "arrows.openInArrowsApp" -> openInArrowsApp()
             "arrows.openTutorial" -> onOpenExternal(TUTORIAL_URL)
             "arrows.validate" -> validate()
+            "arrows.format" -> format()
             "arrows.exportSvg" -> export("svg", null, "svg", "SVG")
             "arrows.exportGraphQL" -> export("graphql", null, "graphql", "GraphQL")
             "arrows.exportCypher" -> withCypherClause { export("cypher", JSONObject().put("keyword", it), "cypher", "Cypher") }
@@ -227,6 +232,32 @@ class ArrowsFileEditor(
             val more = issues.size - VALIDATE_MAX_SHOWN
             val body = if (more > 0) "$shown\n…and $more more" else shown
             Messages.showWarningDialog(project, body, "Validate Graph — ${issues.size} issue(s)")
+        }
+    }
+
+    // Auto-arrange node positions with one of the bundled layouts. The layout itself is pure and
+    // can be O(n^2) (force-directed), so it runs off the EDT under a cancellable progress dialog.
+    private fun format() {
+        ApplicationManager.getApplication().invokeLater {
+            val doc = document ?: return@invokeLater
+            val text = doc.text
+            if (runCatching { JSONObject(text) }.isFailure) {
+                Messages.showWarningDialog(project, "Cannot lay out: this graph doesn't parse cleanly.", "Auto-arrange Nodes")
+                return@invokeLater
+            }
+            val labels = LAYOUTS.map { it.label }.toTypedArray()
+            val props = PropertiesComponent.getInstance()
+            val last = props.getValue(LAST_LAYOUT_KEY)?.takeIf { it in labels } ?: labels.first()
+            val chosen = Messages.showEditableChooseDialog(
+                "Pick a layout algorithm", "Auto-arrange Nodes", null, labels, last, null,
+            )?.let { picked -> LAYOUTS.firstOrNull { it.label == picked } } ?: return@invokeLater
+            props.setValue(LAST_LAYOUT_KEY, chosen.label)
+
+            val next = ProgressManager.getInstance().runProcessWithProgressSynchronously<String?, RuntimeException>(
+                { layoutGraph(text, chosen.id) },
+                "Arrows: ${chosen.label.lowercase()} layout…", true, project,
+            ) ?: return@invokeLater
+            if (next != text) WriteCommandAction.runWriteCommandAction(project) { doc.setText(next) }
         }
     }
 
@@ -304,6 +335,7 @@ class ArrowsFileEditor(
 
     private companion object {
         const val VALIDATE_MAX_SHOWN = 20
+        const val LAST_LAYOUT_KEY = "arrows.lastLayoutId"
         @Volatile private var schemeRegistered = false
 
         fun registerSchemeHandler() {

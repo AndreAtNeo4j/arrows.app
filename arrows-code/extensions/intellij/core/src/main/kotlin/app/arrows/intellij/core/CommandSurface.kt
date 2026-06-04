@@ -14,10 +14,10 @@ fun parseCommandMenu(json: String): List<CommandEntry> {
         .map { CommandEntry(it.getString("id"), it.getString("title"), it.optString("description"), it.optString("icon")) }
 }
 
-// format needs the 5 TS layout algorithms; openSource needs a 2nd editor on the file (NPE +
-// per-file "open as JSON" drift). Both dropped. validate/rename are plain JSON ops in Kotlin.
+// openSource needs a 2nd editor on the file (platform NPE + per-file "open as JSON" drift), so
+// it's the one kebab command dropped. validate/format/rename are reimplemented as Kotlin JSON ops.
 val SUPPORTED_EMBED_COMMANDS = setOf(
-    "arrows.validate", "arrows.copyCypher", "arrows.exportCypher", "arrows.exportSvg",
+    "arrows.validate", "arrows.format", "arrows.copyCypher", "arrows.exportCypher", "arrows.exportSvg",
     "arrows.exportGraphQL", "arrows.openInArrowsApp", "arrows.renameLabel", "arrows.renameRelType",
 )
 

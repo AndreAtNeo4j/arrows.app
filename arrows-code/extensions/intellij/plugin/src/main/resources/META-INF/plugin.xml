@@ -11,6 +11,7 @@
           <li>Canvas editor for <code>.arrows</code> files</li>
           <li>Cypher export (copy or save), SVG export, and GraphQL-schema export</li>
           <li>Open the current graph in arrows.app, or import one from an arrows.app share link</li>
+          <li>Auto-arrange nodes with five layouts: force-directed, hierarchical, radial, circular, grid</li>
           <li>Project-wide rename for labels and relationship types</li>
           <li>Validate graph structure (duplicate ids, broken references, missing required fields)</li>
           <li>Sidebar with your workspace's <code>.arrows</code> files plus six bundled examples</li>
