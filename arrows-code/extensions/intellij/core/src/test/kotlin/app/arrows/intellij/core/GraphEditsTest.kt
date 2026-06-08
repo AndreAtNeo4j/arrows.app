@@ -67,6 +67,14 @@ class GraphEditsTest {
         assertNull(parseImportInput("https://arrows.app/#/import/json=!!!notb64"))// invalid base64
         assertNull(parseImportInput("x".repeat(5 * 1024 * 1024)))                // over size cap
     }
+
+    @Test
+    fun rejectsShareUrlWhoseDecodedPayloadIsNotAGraph() {
+        // The share-link branch writes the decoded bytes verbatim, so it must not accept a decode
+        // that isn't actually a graph (no nodes array / not an object).
+        assertNull(parseImportInput(arrowsAppImportUrl("\"just a string\"")))   // decodes to a JSON string
+        assertNull(parseImportInput(arrowsAppImportUrl("""{"foo":1}""")))        // object, but no nodes array
+    }
 }
 
 private fun org.json.JSONArray.strings(): List<String> = (0 until length()).map { getString(it) }

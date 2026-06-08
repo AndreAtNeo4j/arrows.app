@@ -4,6 +4,9 @@ import org.json.JSONObject
 
 data class GraphPayload(val raw: Map<String, Any?>)
 
+// Embed→host half of the postMessage contract for the JVM host (mirrors the TS libs/messages shapes).
+// parseInboundMessage is the trust boundary: untrusted JCEF JSON in, a closed InboundMessage out, null
+// on anything malformed — callers branch on the sealed type and never see a partial or throwing parse.
 sealed interface InboundMessage {
     data object Ready : InboundMessage
     data class GraphChanged(val graph: GraphPayload, val docVersion: Long?) : InboundMessage
@@ -17,7 +20,7 @@ private fun JSONObject.stringOrNull(key: String): String? =
     if (opt(key) is String) getString(key) else null
 
 fun parseInboundMessage(raw: String): InboundMessage? {
-    val obj = runCatching { JSONObject(raw) }.getOrNull() ?: return null
+    val obj = parseJsonObjectOrNull(raw) ?: return null
     return when (obj.opt("type")) {
         "ready" -> InboundMessage.Ready
         "graph-changed" -> {

@@ -14,6 +14,7 @@ import app.arrows.intellij.core.MAX_LAYOUT_NODES
 import app.arrows.intellij.core.labelsInGraph
 import app.arrows.intellij.core.layoutGraph
 import app.arrows.intellij.core.parseCommandMenu
+import app.arrows.intellij.core.parseJsonObjectOrNull
 import app.arrows.intellij.core.relTypesInGraph
 import app.arrows.intellij.core.renameLabelInGraph
 import app.arrows.intellij.core.renameRelTypeInGraph
@@ -116,8 +117,9 @@ class ArrowsFileEditor(
         // JCEF callbacks fire off the EDT; hop to it before reading the Document.
         ApplicationManager.getApplication().invokeLater {
             val doc = document ?: return@invokeLater
-            val graph = try { JSONObject(doc.text) } catch (e: JSONException) {
-                thisLogger().warn("arrows: document is not valid JSON; canvas not updated"); return@invokeLater
+            val graph = parseJsonObjectOrNull(doc.text) ?: run {
+                thisLogger().warn("arrows: document is not valid JSON (or too deeply nested); canvas not updated")
+                return@invokeLater
             }
             val message = JSONObject()
                 .put("type", "load")
@@ -217,7 +219,7 @@ class ArrowsFileEditor(
     }
 
     private fun parsesOrWarn(text: String, message: String = "This graph doesn't parse cleanly."): Boolean {
-        if (runCatching { JSONObject(text) }.isSuccess) return true
+        if (parseJsonObjectOrNull(text) != null) return true
         arrowsNotify(project, message, NotificationType.WARNING)
         return false
     }

@@ -9,6 +9,39 @@ val ALLOWED_EXTERNAL_HOSTS = setOf(
     "neo4j.com", "feedback.neo4j.com", "www.youtube.com", "youtube.com", "github.com",
 )
 
+// org.json parses recursively with no depth cap; deeply-nested untrusted input overflows the JVM
+// stack as a StackOverflowError (an Error, not a JSONException, so a naive try/catch misses it).
+// Real arrows graphs nest only a few levels deep.
+const val MAX_JSON_DEPTH = 200
+
+internal fun jsonNestingWithinLimit(text: String): Boolean {
+    var depth = 0
+    var inString = false
+    var escaped = false
+    for (c in text) {
+        if (inString) {
+            when {
+                escaped -> escaped = false
+                c == '\\' -> escaped = true
+                c == '"' -> inString = false
+            }
+            continue
+        }
+        when (c) {
+            '"' -> inString = true
+            '{', '[' -> if (++depth > MAX_JSON_DEPTH) return false
+            '}', ']' -> if (depth > 0) depth--
+        }
+    }
+    return true
+}
+
+// Parse untrusted JSON defensively: bound nesting before parsing so org.json can't blow the stack.
+fun parseJsonObjectOrNull(text: String): JSONObject? {
+    if (!jsonNestingWithinLimit(text)) return null
+    return runCatching { JSONObject(text) }.getOrNull()
+}
+
 fun isAllowedExternalUrl(url: String): Boolean {
     val uri = try { URI(url) } catch (_: Exception) { return false }
     return uri.scheme?.lowercase() == "https" && uri.userInfo == null && uri.host?.lowercase() in ALLOWED_EXTERNAL_HOSTS

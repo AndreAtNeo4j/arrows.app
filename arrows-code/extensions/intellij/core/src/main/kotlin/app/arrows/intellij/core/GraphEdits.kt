@@ -12,14 +12,19 @@ private fun JSONArray.objects(): List<JSONObject> = (0 until length()).mapNotNul
 private fun JSONArray?.strings(): List<String> =
     if (this == null) emptyList() else (0 until length()).mapNotNull { optString(it).ifEmpty { null } }
 private fun graphArray(json: String, key: String): JSONArray? =
-    runCatching { JSONObject(json).optJSONArray(key) }.getOrNull()
+    parseJsonObjectOrNull(json)?.optJSONArray(key)
 
 fun parseImportInput(raw: String): String? {
     val trimmed = raw.trim()
     if (trimmed.isEmpty() || trimmed.length > MAX_IMPORT_BYTES) return null
     if (trimmed.startsWith("http", true) || "import/json=" in trimmed) {
         val encoded = IMPORT_JSON.find(trimmed)?.groupValues?.get(1) ?: return null
-        return runCatching { String(Base64.getDecoder().decode(URLDecoder.decode(encoded, "UTF-8"))) }.getOrNull()
+        val decoded = runCatching { String(Base64.getDecoder().decode(URLDecoder.decode(encoded, "UTF-8"))) }.getOrNull()
+            ?: return null
+        // The decoded base64 is fresh untrusted content written verbatim to disk by the caller:
+        // re-apply the size cap to the decoded length and require it parses as a graph, matching
+        // the raw-JSON branch (the encoded cap above bounds input, not the decoded output).
+        return decoded.takeIf { it.length <= MAX_IMPORT_BYTES && it.trim().startsWith("{") && graphArray(it, "nodes") != null }
     }
     return if (trimmed.startsWith("{") && graphArray(trimmed, "nodes") != null) trimmed else null
 }

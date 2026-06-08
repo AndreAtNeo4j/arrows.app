@@ -80,6 +80,18 @@ class HostLogicTest {
     }
 
     @Test
+    fun parsesNormalJsonButRejectsPathologicalNesting() {
+        assertTrue(parseJsonObjectOrNull("""{"nodes":[{"id":"n0"}],"relationships":[]}""") != null)
+        assertNull(parseJsonObjectOrNull("not json"))
+        assertTrue(jsonNestingWithinLimit("""{"nodes":[{"id":"n0"}],"relationships":[]}"""))
+        assertFalse(jsonNestingWithinLimit("[".repeat(MAX_JSON_DEPTH + 5)))
+        // Deeply-nested input would StackOverflow org.json's recursive parser; the guard rejects it
+        // before parsing, so it must return null rather than throw.
+        val deep = "{\"a\":" + "[".repeat(5000) + "]".repeat(5000) + "}"
+        assertNull(parseJsonObjectOrNull(deep))
+    }
+
+    @Test
     fun mapsCommonMimeTypes() {
         assertEquals("text/javascript", embedMimeType("assets/x.js"))
         assertEquals("image/svg+xml", embedMimeType("logo.svg"))
