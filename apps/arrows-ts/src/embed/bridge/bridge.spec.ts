@@ -2,6 +2,7 @@
 // this file threads many ops through a single bridge to catch ping-pong, clobber, and lost emits.
 
 import { describe, expect, it } from 'vitest';
+import { ActionCreators as UndoActionCreators } from 'redux-undo';
 import { initBridge, type InitBridgeOptions } from './bridge';
 
 type Entity = { id: string; [k: string]: unknown };
@@ -89,6 +90,31 @@ describe('bridge - handshake', () => {
     const { store, bridge } = setup();
     bridge.receive({ type: 'load', graph: { nodes: [{ id: 'n0', position: { x: 1, y: 2 } }], relationships: [], style: {} }, docVersion: 0 });
     expect(store.getState().graph.present.nodes).toHaveLength(1);
+  });
+
+  it('clears undo history on the first load, preserving it on later loads', () => {
+    // Without this, undo after the first load reverts to the boot emptyGraph's phantom node.
+    const { store, bridge } = setup();
+    const types: string[] = [];
+    const orig = store.dispatch;
+    store.dispatch = (a: unknown) => { types.push((a as { type?: string }).type ?? ''); return orig(a); };
+    const clear = UndoActionCreators.clearHistory().type;
+
+    bridge.receive({ type: 'load', graph: { nodes: [], relationships: [], style: {} }, docVersion: 0 });
+    expect(types.filter((t) => t === clear)).toHaveLength(1);
+
+    bridge.receive({ type: 'load', graph: { nodes: [{ id: 'x', position: { x: 0, y: 0 } }], relationships: [], style: {} }, docVersion: 1 });
+    expect(types.filter((t) => t === clear)).toHaveLength(1);
+  });
+
+  it('does not emit the boot graph before the first load arrives', () => {
+    // A dispatch before the first load must not escape as a graph-changed (phantom node in the doc).
+    const { store, emits } = setup();
+    store.dispatch({
+      type: 'GRAPH/MUTATE',
+      next: { nodes: [{ id: 'boot', position: { x: 0, y: 0 } }], relationships: [], style: {} },
+    });
+    expect(emits()).toHaveLength(0);
   });
 });
 
@@ -209,7 +235,8 @@ describe('bridge - outbound suppression during interaction', () => {
   });
 
   it('emits exactly once on drag-end (intermediate states collapse)', () => {
-    const { store, emits } = setup();
+    const { store, bridge, emits } = setup();
+    bridge.receive({ type: 'load', graph: { nodes: [], relationships: [], style: {} }, docVersion: 0 });
     store.dispatch({ type: 'MOUSE/SET_DRAG', dragType: 'NODE_DRAG' });
     for (let i = 0; i < 5; i++) {
       store.dispatch({
@@ -224,7 +251,8 @@ describe('bridge - outbound suppression during interaction', () => {
   });
 
   it('suppresses emit while a caption is being edited; flushes one emit on commit', () => {
-    const { store, emits } = setup();
+    const { store, bridge, emits } = setup();
+    bridge.receive({ type: 'load', graph: { nodes: [], relationships: [], style: {} }, docVersion: 0 });
     store.dispatch({ type: 'SELECTION/SET_EDITING', editing: { id: 'a' } });
     for (let i = 0; i < 3; i++) {
       store.dispatch({
@@ -239,6 +267,7 @@ describe('bridge - outbound suppression during interaction', () => {
 
   it('suppresses emit while a DOM input is focused; flushes on flush()', () => {
     const { store, bridge, emits, setFocus } = setup();
+    bridge.receive({ type: 'load', graph: { nodes: [], relationships: [], style: {} }, docVersion: 0 });
     setFocus(true);
     store.dispatch({
       type: 'GRAPH/MUTATE',

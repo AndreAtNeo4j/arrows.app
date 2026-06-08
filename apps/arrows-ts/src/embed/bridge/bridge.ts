@@ -1,4 +1,5 @@
 import { Point, completeWithDefaults } from '@neo4j-arrows/model';
+import { ActionCreators as UndoActionCreators } from 'redux-undo';
 import { renderers, type RenderKind } from './bridgeRender';
 import { shouldEmit } from './shouldEmit';
 import { isUserBusy } from './userBusy';
@@ -151,6 +152,10 @@ export function initBridge(
   let lastSerialized = '';
   let docVersion = -1;
   let pendingLoad: IncomingGraph | null = null;
+  // emptyGraph() seeds a placeholder node pre-load; emitting it before the first load writes a phantom node.
+  let loaded = false;
+  // applyHostLoad keeps undo across echoes but leaves the boot emptyGraph in the past; drop it once, on the first load.
+  let historyCleared = false;
   const echoes = makeEchoCache();
 
   const tryApplyPending = (): void => {
@@ -163,9 +168,14 @@ export function initBridge(
     // Pre-arm lastSerialized so the dispatch below doesn't re-emit.
     lastSerialized = JSON.stringify(graph);
     applyHostLoad(store, graph);
+    if (!historyCleared) {
+      historyCleared = true;
+      store.dispatch(UndoActionCreators.clearHistory());
+    }
   };
 
   const tryEmit = (): void => {
+    if (!loaded) return;
     if (pendingLoad) {
       tryApplyPending();
       return;
@@ -191,6 +201,7 @@ export function initBridge(
       requestId?: string;
     };
     if (m.type === 'load' && m.graph) {
+      loaded = true;
       if (typeof m.docVersion === 'number') docVersion = m.docVersion;
       if (Array.isArray(m.menu) && m.menu.every(isValidMenuEntry)) {
         embedWindow().__arrowsMenu = m.menu;
