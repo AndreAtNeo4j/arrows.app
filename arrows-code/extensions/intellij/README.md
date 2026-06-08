@@ -85,7 +85,7 @@ Tests:
 ./gradlew test            # pure :core units + :plugin headless integration tests
 ```
 
-This plugin is a thin Kotlin/JCEF adapter — host plumbing only (a `JBCefBrowser` loading the bundle, the postMessage bridge, a `FileEditor` for `*.arrows`, the sidebar tool window). All feature logic lives in the web bundle and is shared with the VS Code host over the same protocol; see [../../README.md](../../README.md) for the subsystem layout.
+This plugin is a thin Kotlin/JCEF adapter — host plumbing only (a `JBCefBrowser` loading the bundle, the postMessage bridge, a `FileEditor` for `*.arrows`, the sidebar tool window). All feature logic lives in the web bundle and is shared with the VS Code host over the same protocol. See [ARCHITECTURE.md](ARCHITECTURE.md) for how the internals fit together and why, and [../../README.md](../../README.md) for the subsystem layout.
 
 ## Issues
 
