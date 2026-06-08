@@ -16,6 +16,16 @@ import java.io.InputStream
 const val EMBED_HOST = "arrows.local"
 const val EMBED_URL = "http://arrows.local/embed.html"
 
+// Mirrors the VS Code webview CSP (webviewHtml.ts) at the arrows.local origin. No nonce: bundle scripts
+// share this origin and the host bridge is injected via CEF executeJavaScript, which CSP doesn't govern.
+private const val EMBED_CSP =
+    "default-src 'none'; " +
+        "img-src http://arrows.local https: data:; " +
+        "font-src http://arrows.local https: data:; " +
+        "style-src http://arrows.local 'unsafe-inline'; " +
+        "script-src http://arrows.local; " +
+        "connect-src http://arrows.local"
+
 // Custom scheme: file:// breaks relative asset paths and CSP (Chromium resolves URLs against the base and blocks cross-origin).
 class EmbedSchemeHandlerFactory : CefSchemeHandlerFactory {
     override fun create(browser: CefBrowser?, frame: CefFrame?, schemeName: String?, request: CefRequest?): CefResourceHandler =
@@ -43,6 +53,7 @@ private class EmbedResourceHandler : CefResourceHandler {
             return
         }
         response.mimeType = mime
+        if (mime == "text/html") response.setHeaderByName("Content-Security-Policy", EMBED_CSP, true)
         response.status = 200
         responseLength.set(-1)
     }
