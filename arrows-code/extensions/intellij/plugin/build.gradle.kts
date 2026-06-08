@@ -37,9 +37,10 @@ intellijPlatform {
     }
 }
 
-// Ship the shared embed bundle if it has been built (dist/apps/arrows-ts, the
-// same artifact the VS Code host bundles). Drop the placeholder when present.
-val embedBundle = rootProject.file("../../../dist/apps/arrows-ts")
+// Ship the curated embed the VS Code host packages (vscode/media/embed), not the raw Vite output
+// (dist/apps/arrows-ts) — the latter carries dead font formats (eot/ttf/svg), an unused brand-icon
+// set, and a cookie-consent stylesheet this offline plugin never uses. Drop the placeholder when present.
+val embedBundle = rootProject.file("../vscode/media/embed")
 val sharedMedia = rootProject.file("../vscode/media")     // reuse the VS Code host's icons
 val examples = rootProject.file("../../fixtures/examples") // reuse the bundled examples
 tasks.processResources {
