@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { COMMANDS } from '@arrows-code/messages';
 import {
-  COMMANDS,
   embedMenuPayload,
   sidebarQuickActions,
   webviewAllowedCommandIds,

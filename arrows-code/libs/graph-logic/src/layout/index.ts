@@ -26,5 +26,3 @@ export const LAYOUTS: readonly LayoutDescriptor[] = [
 export function findLayout(id: LayoutId): LayoutDescriptor | undefined {
   return LAYOUTS.find((l) => l.id === id);
 }
-
-export type { LayoutFn, LayoutProgress, GraphIn, NodeIn, RelIn } from './types';

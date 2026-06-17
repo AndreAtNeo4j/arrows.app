@@ -2,7 +2,6 @@
 // host - VS Code and IntelliJ - renders the same menu from one source.
 import { COMMANDS, type ArrowsCommand } from '@arrows-code/messages';
 
-export { COMMANDS };
 export type { ArrowsCommand };
 
 export const webviewAllowedCommandIds: ReadonlySet<string> = new Set(
