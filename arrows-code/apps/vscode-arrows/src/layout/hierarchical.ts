@@ -5,6 +5,8 @@ import type { LayoutFn } from './types';
 import { applyPositions, round1 } from './types';
 
 const LAYER_HEIGHT = 280;
+const LABEL_CHAR_WIDTH = 11;
+const LAYER_LABEL_ROOM = 220;
 const NODE_SPACING = 340;
 
 export const hierarchical: LayoutFn = async (graph) => {
@@ -62,10 +64,29 @@ export const hierarchical: LayoutFn = async (graph) => {
   for (const arr of byLayer.values()) arr.sort();
 
   const layers = [...byLayer.keys()].sort((a, b) => a - b);
+  // A vertical edge label runs along the edge, so a long relationship type needs a taller gap.
+  const longestType = Math.max(0, ...graph.relationships.map((r) => String(r.type ?? '').length));
+  const layerHeight = Math.max(LAYER_HEIGHT, longestType * LABEL_CHAR_WIDTH + LAYER_LABEL_ROOM);
 
   // Barycenter sweeps (down then up) cut crossings; alphabetical order routed edges through nodes.
+  // An edge spanning several layers reserves a slot in each one it crosses, so a node there is
+  // pushed aside instead of sitting on the straight line.
   const neighbours = new Map<string, string[]>(ids.map((id) => [id, []]));
-  for (const [from, tos] of edgesOut) for (const to of tos) { neighbours.get(from)!.push(to); neighbours.get(to)!.push(from); }
+  const link = (a: string, b: string) => { neighbours.get(a)!.push(b); neighbours.get(b)!.push(a); };
+  for (const [from, tos] of edgesOut) {
+    for (const to of tos) {
+      let prev = from;
+      for (let L = layer.get(from)! + 1; L < layer.get(to)!; L++) {
+        const dummy = `\0${from}\0${to}\0${L}`;
+        layer.set(dummy, L);
+        neighbours.set(dummy, []);
+        byLayer.get(L)!.push(dummy);
+        link(prev, dummy);
+        prev = dummy;
+      }
+      link(prev, to);
+    }
+  }
   const slot = new Map<string, number>();
   const order = (L: number, ref: number) => {
     const arr = byLayer.get(L)!;
@@ -88,7 +109,7 @@ export const hierarchical: LayoutFn = async (graph) => {
     const arr = byLayer.get(L)!;
     const offsetX = -((arr.length - 1) * NODE_SPACING) / 2;
     for (let i = 0; i < arr.length; i++) {
-      positions.set(arr[i], { x: round1(offsetX + i * NODE_SPACING), y: round1(L * LAYER_HEIGHT) });
+      positions.set(arr[i], { x: round1(offsetX + i * NODE_SPACING), y: round1(L * layerHeight) });
     }
   }
 

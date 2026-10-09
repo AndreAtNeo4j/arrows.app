@@ -1,7 +1,7 @@
 import { parse } from 'graphql';
 import { Base64 } from 'js-base64';
 import { build, edit, layout, validate, toCypher, toGraphQL, shareUrl, normalize, LAYOUT_IDS, type PathOp, type GraphJson } from './engine';
-import { chooseLayout, layoutPenalty } from './autoLayout';
+import { chooseLayout, layoutScore } from './autoLayout';
 import { verificationChecklist } from './checklist';
 import { renderSvg, renderPng } from './render';
 
@@ -403,15 +403,27 @@ async function main(): Promise<void> {
 
   await check('build auto-layout routes no relationship through an unrelated node (e-commerce schema)', async () => {
     const ids = ['Customer', 'Order', 'Product', 'Category', 'Address', 'Supplier', 'Review'];
-    const rels = [['Customer', 'Order'], ['Order', 'Product'], ['Product', 'Category'], ['Customer', 'Address'],
-      ['Order', 'Address'], ['Supplier', 'Product'], ['Customer', 'Review'], ['Review', 'Product']];
+    const rels = [['Customer', 'Order', 'PLACED'], ['Order', 'Product', 'CONTAINS'], ['Product', 'Category', 'IN_CATEGORY'],
+      ['Customer', 'Address', 'LIVES_AT'], ['Order', 'Address', 'SHIPS_TO'], ['Supplier', 'Product', 'SUPPLIES'],
+      ['Customer', 'Review', 'WROTE'], ['Review', 'Product', 'REVIEWS']];
     const out = await build({
       nodes: ids.map((id) => ({ id, labels: [id], properties: { name: 'string' } })),
-      relationships: rels.map(([fromId, toId]) => ({ fromId, toId, type: `${fromId}_${toId}` })),
+      relationships: rels.map(([fromId, toId, type]) => ({ fromId, toId, type })),
     });
-    const laidOut = out.json as Parameters<typeof layoutPenalty>[0];
-    const throughNode = layoutPenalty({ ...laidOut, relationships: laidOut.relationships });
-    assert(throughNode < 10, `penalty ${throughNode}: an edge crosses a node or nodes overlap`);
+    const { hard } = layoutScore(out.json as Parameters<typeof layoutScore>[0]);
+    assert(hard === 0, `${hard} hidden-content defects: an edge or label crosses a node, or nodes overlap`);
+  });
+
+  await check('hierarchical keeps a layer-skipping edge clear of the node in the layer it crosses', async () => {
+    const out = await build({
+      nodes: [{ id: 'a', caption: 'A' }, { id: 'b', caption: 'B' }, { id: 'c', caption: 'C' }],
+      relationships: [{ fromId: 'a', toId: 'b', type: 'X' }, { fromId: 'b', toId: 'c', type: 'X' }, { fromId: 'a', toId: 'c', type: 'X' }],
+    }, 'hierarchical');
+    const at = (id: string) => (out.json.nodes as { id: string; position: { x: number; y: number } }[]).find((n) => n.id === id)!.position;
+    const [a, b, c] = [at('a'), at('b'), at('c')];
+    const t = (b.y - a.y) / (c.y - a.y);
+    const gap = Math.abs(b.x - (a.x + t * (c.x - a.x)));
+    assert(gap > 150, `node B sits ${Math.round(gap)}px from the A-C edge`);
   });
 
   await check('chooseLayout picks radial for a hub-and-spoke shape', () => {
