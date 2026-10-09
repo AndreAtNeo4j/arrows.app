@@ -62,6 +62,27 @@ export const hierarchical: LayoutFn = async (graph) => {
   for (const arr of byLayer.values()) arr.sort();
 
   const layers = [...byLayer.keys()].sort((a, b) => a - b);
+
+  // Barycenter sweeps (down then up) cut crossings; alphabetical order routed edges through nodes.
+  const neighbours = new Map<string, string[]>(ids.map((id) => [id, []]));
+  for (const [from, tos] of edgesOut) for (const to of tos) { neighbours.get(from)!.push(to); neighbours.get(to)!.push(from); }
+  const slot = new Map<string, number>();
+  const order = (L: number, ref: number) => {
+    const arr = byLayer.get(L)!;
+    const centre = (id: string) => {
+      const xs = neighbours.get(id)!.filter((n) => layer.get(n) === ref).map((n) => slot.get(n)!);
+      return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : slot.get(id)!;
+    };
+    const keyed = arr.map((id) => [id, centre(id)] as const);
+    keyed.sort((a, b) => a[1] - b[1]);
+    byLayer.set(L, keyed.map(([id]) => id));
+    byLayer.get(L)!.forEach((id, i) => slot.set(id, i - (arr.length - 1) / 2));
+  };
+  for (const L of layers) byLayer.get(L)!.forEach((id, i, arr) => slot.set(id, i - (arr.length - 1) / 2));
+  for (let sweep = 0; sweep < 4; sweep++) {
+    for (let i = 1; i < layers.length; i++) order(layers[i], layers[i - 1]);
+    for (let i = layers.length - 2; i >= 0; i--) order(layers[i], layers[i + 1]);
+  }
   const positions = new Map<string, { x: number; y: number }>();
   for (const L of layers) {
     const arr = byLayer.get(L)!;

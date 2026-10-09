@@ -3,10 +3,9 @@ import {VisualNode} from './VisualNode';
 import { VisualAttachment } from './VisualAttachment';
 
 export class ResolvedRelationship {
-  type: any;
-  // id(selection: EntitySelection, id: any): any {
-  //   throw new Error("Method not implemented.");
-  // }
+  // VisualRelationship gates the type caption on this being set; the JS original assigned
+  // it in the constructor and the TS port dropped it, so no relationship type was drawn.
+  get type() { return this.relationship.type}
   get id() { return this.relationship.id}
   constructor(
     readonly relationship:Relationship, 

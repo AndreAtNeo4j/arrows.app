@@ -109,6 +109,10 @@ function applyOne(graph: Graph, op: PatchOp): Graph {
           r.type === op.oldType ? { ...r, ...setTypeOnRel(r, op.newType) } : r
         ),
       };
+    default:
+      // Without this an unknown op returns undefined, so the whole chain collapses and the
+      // failure is reported against the next op instead of the one that caused it.
+      throw new Error(`Unknown op type "${(op as { type: string }).type}"`);
   }
 }
 

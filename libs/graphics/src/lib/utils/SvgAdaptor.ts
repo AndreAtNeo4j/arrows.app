@@ -265,8 +265,10 @@ export class SvgAdaptor implements DrawingContext {
     if (this.currentPath) {
       this.pushChild(newElement('path', {
         d: this.currentPath.join(' '),
+        // SVG's initial fill is black, so without this any path enclosing area - a self-loop, a
+        // rectilinear arrow - floods solid. Matches polyLine above.
+        fill: 'none',
         ...this.filteredAttributes([
-          'fill',
           'stroke',
           'stroke-width'
         ])

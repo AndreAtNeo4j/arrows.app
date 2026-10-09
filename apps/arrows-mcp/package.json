@@ -1,0 +1,30 @@
+{
+  "name": "@neo4j-arrows/arrows-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MCP server for creating, editing, rendering and exporting Neo4j arrows.app graph models.",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "tsc --noEmit -p tsconfig.json && node scripts/build.mjs && node dist/test.cjs && node scripts/e2e.mjs",
+    "pack": "node scripts/build.mjs && node scripts/pack-extension.mjs",
+    "sync": "node scripts/build.mjs && node scripts/sync-extension.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@napi-rs/canvas": "^0.1.60",
+    "jsdom": "^24.0.0",
+    "zod": "^4.4.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.17.17",
+    "js-base64": "^3.7.5",
+    "graphql": "^16.6.0",
+    "typescript": "^5.5.0",
+    "@types/node": "^20.0.0",
+    "@types/jsdom": "^21.1.7"
+  }
+}

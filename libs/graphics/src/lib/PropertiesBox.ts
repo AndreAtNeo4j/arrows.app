@@ -17,6 +17,7 @@ export class PropertiesBox {
   editing: boolean;
   font: FontStyle;
   fontColor: string;
+  backgroundColor: string;
   selectionColor: string;
   lineHeight: number;
   alignment: string;
@@ -36,6 +37,7 @@ export class PropertiesBox {
     }
     textMeasurement.font = this.font
     this.fontColor = style('property-color') as string
+    this.backgroundColor = style('background-color') as string
     this.selectionColor = adaptForBackground(this.editing ? selectionHandle : selectionBorder, style)
     this.lineHeight = this.font.fontSize * 1.2
     this.alignment = style('property-alignment') as string
@@ -100,7 +102,8 @@ export class PropertiesBox {
 
   drawBackground(ctx:DrawingContext) {
     const boundingBox = this.boundingBox()
-    ctx.fillStyle = 'white'
+    // Masks what the text sits over, so it must match the canvas; white leaves a pale patch.
+    ctx.fillStyle = this.backgroundColor
     ctx.rect(boundingBox.left, boundingBox.top, boundingBox.width, boundingBox.height, 0, true, false)
   }
 

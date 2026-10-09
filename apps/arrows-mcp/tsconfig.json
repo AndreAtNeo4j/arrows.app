@@ -1,0 +1,26 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "../..",
+    "target": "es2022",
+    "module": "esnext",
+    "baseUrl": ".",
+    "moduleResolution": "bundler",
+    "allowJs": true,
+    "strict": true,
+    "noEmit": true,
+    "types": ["node"],
+    "paths": {
+      "@arrows-code/format-json": ["../../arrows-code/libs/format-json/src/index.ts"],
+      "@neo4j-arrows/graphics": ["../../libs/graphics/src/index.ts"],
+      "@neo4j-arrows/model": ["../../libs/model/src/index.ts"],
+      "engine/patch": ["../../arrows-code/apps/vscode-arrows/src/patch/apply.ts"],
+      "engine/patch-types": ["../../arrows-code/apps/vscode-arrows/src/patch/types.ts"],
+      "engine/validator": ["../../arrows-code/apps/vscode-arrows/src/validator/index.ts"],
+      "engine/layout": ["../../arrows-code/apps/vscode-arrows/src/layout/index.ts"],
+      "engine/cypher": ["../../apps/arrows-ts/src/storage/exportCypher.js"],
+      "engine/graphql": ["../../apps/arrows-ts/src/graphql/exportGraphQL.js"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.d.ts"]
+}

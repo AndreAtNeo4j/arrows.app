@@ -5,6 +5,11 @@ import snakeToCamelCase from "./snakeToCamelCase";
 import snakeToPascalCase from "./snakeToPascalCase";
 import typeStringToTypeNode from "./typeStringToTypeNode";
 
+// GraphQL Name grammar (spec section 2.1.9): ASCII letter/underscore, then letters/digits/underscore.
+// Unlike Cypher, GraphQL has no identifier-quoting syntax, so a caption that doesn't already
+// satisfy this can't be used as a type name at all - "田中" or "My Node" would emit unparseable SDL.
+const GRAPHQL_NAME = /^[_A-Za-z][_0-9A-Za-z]*$/;
+
 function appendRelationField({ rel, toNode, definition, direction }) {
   const relTypeNode = typeStringToTypeNode(rel.type);
   const relTypeName = extractNameFromTypeNode(relTypeNode);
@@ -85,9 +90,17 @@ function exportGraphQL(graph) {
 
   const interfaces = [];
   const nodes = graph.nodes.map((n) => {
-    const label = (n.labels || [])[0];
+    // A caption-only node (no explicit label) still has an obvious GraphQL type name in its
+    // caption - matches the same fallback in exportCypher.js and schema.ts's toConstraints -
+    // but only when the caption is itself already a legal GraphQL Name; see GRAPHQL_NAME above.
+    const captionAsLabel = n.caption && GRAPHQL_NAME.test(n.caption) ? n.caption : undefined;
+    const label = (n.labels || [])[0] || captionAsLabel;
     if (!label) {
-      throw new Error("Nodes require a single label for GraphQL export.");
+      throw new Error(
+        n.caption
+          ? `Node "${n.caption}" has no label and its caption is not a valid GraphQL name - add a label.`
+          : "Nodes require a single label for GraphQL export."
+      );
     }
 
     if (!Object.keys(n.properties || {}).length) {

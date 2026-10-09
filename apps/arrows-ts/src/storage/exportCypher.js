@@ -6,7 +6,9 @@ const escape = name => {
   if (plainIdentifier.test(name)) {
     return name
   } else {
-    return '`' + name + '`'
+    // Cypher escapes a backtick inside a quoted identifier by doubling it; without this a
+    // label or property name containing one breaks out and injects arbitrary Cypher.
+    return '`' + String(name).replace(/`/g, '``') + '`'
   }
 }
 
@@ -14,7 +16,7 @@ const quote = value => {
   if (typeof value === 'number' || (!isNaN(value) && !isNaN(parseFloat(value)))) {
     return value
   } else {
-    return '"' + value + '"'
+    return '"' + String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"'
   }
 }
 
@@ -125,7 +127,12 @@ export const exportCypher = (graph, keyword, options) => {
       const part = path[i]
       if (i % 2 === 0) {
         const node = part
-        const labels = node.labels.map(label => `:${escape(label)}`).join('')
+        // A node drawn with a caption but no label would otherwise export as a bare, anonymous
+        // (), indistinguishable from every other unlabelled node - the caption is the only
+        // identity a caption-only model actually gave it. Matches schema.ts's toConstraints,
+        // which already falls back the same way for property-type constraints.
+        const labelSource = node.labels.length > 0 ? node.labels : (node.caption ? [node.caption] : [])
+        const labels = labelSource.map(label => `:${escape(label)}`).join('')
         const properties = entityProperties(node, options.includeStyling)
         if (visitedNodes[node.id]) {
           line += `(${idMap[node.id]})`
@@ -140,7 +147,7 @@ export const exportCypher = (graph, keyword, options) => {
           type = null
         }
         const properties = entityProperties(relationship, options.includeStyling)
-        const relationshipSpec = type || properties ? `[${space(type ? ':' + type : null, properties)}]` : ''
+        const relationshipSpec = type || properties ? `[${space(type ? ':' + escape(type) : null, properties)}]` : ''
         const firstArrow = part.direction === 'reverse' ? '<-' : '-'
         const secondArrow = part.direction === 'forward' ? '->' : '-'
         line += firstArrow + relationshipSpec + secondArrow
