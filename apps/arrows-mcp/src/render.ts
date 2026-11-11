@@ -10,9 +10,9 @@ const EMPTY_SVG =
   '<rect width="100%" height="100%" fill="#ffffff"/>' +
   '<text x="120" y="44" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#888">empty graph</text></svg>';
 
-// Claude tokenises an image at w*h/750, so this dominates every result's cost. 1092 keeps
-// captions legible for the model's own check while costing ~45% less than 1568.
-const MAX_PNG_DIMENSION = 1092;
+// Claude downscales an image past ~1568px before the model sees it, so a larger PNG costs the model
+// no more and the user keeps a sharp, zoomable picture. This only bounds the native bitmap.
+const MAX_PNG_DIMENSION = 2400;
 // Property captions sit outside the node, beyond the bounding box, so they clip without padding.
 const PAD = 48;
 // An outlier coordinate inflates the viewBox until every real node is sub-pixel. Rendering only;
