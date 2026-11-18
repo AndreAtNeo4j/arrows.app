@@ -8,6 +8,7 @@ export type { LayoutId };
 import { exportCypher } from 'engine/cypher';
 import exportGraphQL from 'engine/graphql';
 import { isSchemaModel, parseType, toConstraints, withGraphqlScalars } from './schema';
+import { seedStatements } from './seed';
 import { applyTheme } from './style';
 import { pickLayout } from './autoLayout';
 
@@ -164,8 +165,14 @@ async function runLayout(graph: Graph, layoutId: LayoutId): Promise<Graph> {
   const descriptor = findLayout(layoutId);
   if (!descriptor) throw new Error(`unknown layout: ${layoutId}`);
   // GraphIn is layout's own structural type (id/fromId/toId only); bridges to/from the richer Graph.
-  return (await descriptor.run(graph as unknown as GraphIn)) as unknown as Graph;
+  const placed = (await descriptor.run(graph as unknown as GraphIn)) as unknown as Graph;
+  return layoutId === 'hierarchical' ? leftToRight(placed) : placed;
 }
+
+// The layout stacks layers down the y axis. Swapping the axes runs them left to right: landscape
+// canvases have the room, and relationship labels read horizontally.
+const leftToRight = (g: Graph): Graph =>
+  ({ ...g, nodes: g.nodes.map((n) => ({ ...n, position: { x: n.position.y, y: n.position.x } })) }) as unknown as Graph;
 
 /** Repositions nodes only; labels, properties, and relationships are unchanged. */
 export async function layout(
@@ -211,6 +218,16 @@ export function toCypher(
     ? `// warning: ${typed.join(', ')} look like type names but are exported as literal data.\n` +
         `// This model mixes types and values; use cypherStyle "schema" for a type model.\n${data}`
     : data;
+}
+
+/** True when property values are type names (a data model) rather than literals (example data). */
+export function isSchemaGraph(input: GraphJson): boolean {
+  return isSchemaModel(load(input).graph);
+}
+
+/** Deterministic synthetic data for a schema model, as chunked Cypher statements. */
+export function toSeed(input: GraphJson, rows: number, chunk?: number): string[] {
+  return seedStatements(load(input).graph, rows, chunk);
 }
 
 /** Property values are coerced to real GraphQL scalars; an unrecognised one is noted, not thrown. */

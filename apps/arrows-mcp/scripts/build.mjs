@@ -25,7 +25,7 @@ const shared = {
   format: 'cjs',
   target: 'node20',
   alias,
-  external: ['@modelcontextprotocol/sdk', '@napi-rs/canvas', 'jsdom'],
+  external: ['@modelcontextprotocol/sdk', '@napi-rs/canvas', 'jsdom', '@relate/relate'],
   loader: { '.png': 'dataurl', '.svg': 'dataurl' },
   define: {
     __VERSION__: JSON.stringify(JSON.parse(readFileSync(resolve(here, '../package.json'), 'utf8')).version),

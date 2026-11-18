@@ -20,6 +20,8 @@ import {
 } from './engine';
 import { renderSvg, pngFromSvg, type RenderOptions } from './render';
 import { PATH_OPS, MAX_OPS, type PathOp } from './patchPath';
+import { tryModel, formatTry, DEFAULT_SEED, MIN_GROWTH_SEED } from './relate';
+import { MAX_SEED } from './seed';
 import { recall, store } from './session';
 import { THEME_NAMES } from './style';
 import { verificationChecklist } from './checklist';
@@ -56,7 +58,7 @@ const layoutEnum = z.enum(LAYOUT_IDS as [string, ...string[]]);
 
 /** Shared so arrows_build and arrows_layout cannot drift into describing the algorithms differently. */
 const LAYOUT_GUIDANCE =
-  'hierarchical for a tree or DAG (layered, reads top-down), radial for a single hub with many ' +
+  'hierarchical for a tree or DAG (layered, reads left to right), radial for a single hub with many ' +
   'neighbours, circular for a small dense cluster, force for a general graph, grid when there are ' +
   'no relationships.';
 
@@ -386,6 +388,80 @@ async function main(): Promise<void> {
           const text = [`[Open in arrows.app](${share.url})`, info, share.warning].filter(Boolean).join('\n\n');
           return { content: [{ type: 'text', text }] };
         }
+      }
+    },
+  );
+
+  server.registerTool(
+    'arrows_query',
+    {
+      title: 'Test a model with Cypher',
+      annotations: { readOnlyHint: true, openWorldHint: false },
+      description:
+        'Test Cypher against a graph model before handing it to the user. Loads the model into a throwaway ' +
+        'in-memory graph engine (a schema model installs its property-type constraints and is filled with ' +
+        'generated sample data; an instance model loads its literal data), then runs your `queries`. ' +
+        'Use it after arrows_build, whenever you write a query for the user. What you get depends on what you send: ' +
+        '(1) `queries` with the default mode "run": rows, plus a PROFILE summary per query - warnings such as a missing ' +
+        'index (with the exact CREATE INDEX) or a cartesian product, and the plan when something is wrong. ' +
+        'Add `growth: true` to run at N/10 and N rows per label and see how cost grows (constant, linear, worse), the most ' +
+        'trustworthy performance signal here. ' +
+        '(2) `mode: "compile"` with `queries`: EXPLAIN only, nothing executes - catches syntax errors and misspelled labels, ' +
+        'properties and relationship types, instantly. Use it to check that a query runs at all. ' +
+        '(3) no `queries`: just load the model plus `seed`/`data` and report counts, or the constraint that rejected a row. ' +
+        'Defaults: a schema model is seeded with 1000 rows per label unless you pass `seed` (0 for none) or your own `data`. ' +
+        'Generated data is uniform with fixed fan-out 3 and no skew, so supernodes and skewed data are not represented. ' +
+        'PROFILE adds a small overhead (about 3-7% measured) and is on by default because it gives real query details; set ' +
+        '`profile: false` to skip it. The engine is Relate, not Neo4j: trust warnings and growth, not absolute db hits, and a clean ' +
+        'result at small scale does not guarantee speed at scale. Each query runs independently and nothing persists between ' +
+        'calls. If a query errors, returns nothing it should return, or warns, fix the query or the model (arrows_edit) and re-run. ' +
+        'Needs the optional Relate engine; if it is not installed the result says so and the other tools are unaffected.',
+      inputSchema: {
+        id: idArg,
+        graph: graphArg.optional(),
+        queries: z
+          .array(z.string())
+          .max(20)
+          .optional()
+          .describe('Cypher to test, one string each (a string may hold several ";"-separated statements; the last is the one profiled). Omit to only load and count.'),
+        mode: z
+          .enum(['run', 'compile'])
+          .optional()
+          .describe('"run" (default) executes each query on the loaded data; "compile" only EXPLAINs it (syntax and unknown label/property/type checks), without executing'),
+        seed: z
+          .number()
+          .int()
+          .min(0)
+          .max(MAX_SEED)
+          .optional()
+          .describe(`rows to generate per label for a schema model (default ${DEFAULT_SEED}, or 0 when you pass your own \`data\`; 0 = none). Ignored in compile mode.`),
+        data: z
+          .string()
+          .optional()
+          .describe('your own sample data as Cypher (CREATE/MERGE), separated by ";", loaded after the model and seed'),
+        profile: z.boolean().optional().describe('default true: run queries as PROFILE for warnings and plan details; false skips it'),
+        growth: z
+          .boolean()
+          .optional()
+          .describe(`default false: run at N/10 and N rows per label and report how db hits grow. Needs a schema model, mode "run", profile on, queries, and seed >= ${MIN_GROWTH_SEED}`),
+      },
+    },
+    async (args) => {
+      try {
+        const queries = args.queries ?? [];
+        const result = await tryModel(resolveGraph(args), {
+          queries,
+          data: args.data,
+          seed: args.seed,
+          mode: args.mode,
+          profile: args.profile,
+          growth: args.growth,
+        });
+        if (!result.available) return { content: [{ type: 'text', text: result.reason }], isError: true };
+        const report = formatTry(result.runs, { mode: args.mode ?? 'run', profile: args.profile ?? true, hasQueries: queries.length > 0 });
+        return { content: [{ type: 'text', text: report.text }], isError: report.isError };
+      } catch (e) {
+        return { content: [{ type: 'text', text: e instanceof Error ? e.message : String(e) }], isError: true };
       }
     },
   );

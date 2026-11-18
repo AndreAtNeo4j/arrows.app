@@ -22,12 +22,12 @@ const hasImage = (res) => res.content.some((c) => c.type === 'image' && c.mimeTy
 
 const tools = await client.listTools();
 const names = tools.tools.map((t) => t.name).sort();
-assert.deepEqual(names, ['arrows_build', 'arrows_edit', 'arrows_export', 'arrows_layout', 'arrows_render', 'arrows_validate']);
+assert.deepEqual(names, ['arrows_build', 'arrows_edit', 'arrows_export', 'arrows_layout', 'arrows_query', 'arrows_render', 'arrows_validate']);
 console.log('tools:', names.join(', '));
 const buildSchema = tools.tools.find((t) => t.name === 'arrows_build').inputSchema;
 assert.ok(buildSchema.properties.graph.properties?.nodes, 'arrows_build graph schema must show nodes to the model');
 assert.ok(buildSchema.properties.graph.properties.relationships, 'arrows_build graph schema must show relationships');
-for (const name of ['arrows_validate', 'arrows_render', 'arrows_export']) {
+for (const name of ['arrows_validate', 'arrows_render', 'arrows_export', 'arrows_query']) {
   assert.equal(tools.tools.find((t) => t.name === name).annotations?.readOnlyHint, true, `${name} must declare readOnlyHint`);
 }
 
@@ -357,6 +357,18 @@ const captionOnlyId = /id: (g\d+)/.exec(captionOnly.content[0].text)[1];
 const captionOnlyCypher = await client.callTool({ name: 'arrows_export', arguments: { id: captionOnlyId, format: 'cypher', cypherStyle: 'data' } });
 assert.ok(captionOnlyCypher.content[0].text.includes('(:Customer)'), `caption-only cypher export lost node identity: ${captionOnlyCypher.content[0].text}`);
 console.log('caption-only export fallback: cypher identifies nodes by caption when no label is set');
+
+// arrows_query needs the optional Relate engine: with it, a drawn model answers a question; without
+// it, the tool says so and flags an error rather than crashing the server.
+const tried = await client.callTool({ name: 'arrows_query', arguments: {
+  graph: { nodes: [{ id: 'p', labels: ['Person'], properties: { name: 'string' } }], relationships: [] },
+  data: 'CREATE (:Person {name: "Ann"});',
+  queries: ['MATCH (p:Person) RETURN p.name AS name'],
+} });
+const triedText = tried.content[0].text;
+if (tried.isError) assert.ok(/not installed/.test(triedText), `arrows_query failed for a reason other than a missing engine: ${triedText}`);
+else assert.ok(/1 row\(s\).*Ann/.test(triedText), `arrows_query returned no Ann row: ${triedText}`);
+console.log(`arrows_query: ${tried.isError ? 'engine not installed, reported cleanly' : 'answered a question from the drawn model'}`);
 
 await client.close();
 console.log('\nE2E PASS');

@@ -24,7 +24,7 @@ export function chooseLayout(graph: MinimalGraph): LayoutId {
   if (maxDegree >= 3 && maxDegree / totalDegree >= 0.4) return 'radial';
 
   // Kahn's algorithm: repeatedly strip zero-indegree nodes. If every node can be removed
-  // this way, the graph has no cycle - a tree/DAG shape that reads best top-down.
+  // this way, the graph has no cycle - a tree/DAG shape that reads best in layers, left to right.
   const adjacency = new Map<string, string[]>();
   for (const r of relationships) adjacency.set(r.fromId, [...(adjacency.get(r.fromId) ?? []), r.toId]);
   const remaining = new Map(nodes.map((n) => [n.id, inDegree.get(n.id) ?? 0]));

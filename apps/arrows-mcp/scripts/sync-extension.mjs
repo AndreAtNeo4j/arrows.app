@@ -20,8 +20,12 @@ if (!existsSync(resolve(app, 'dist/server.cjs'))) {
 
 // The installed extension is an unpacked copy of the bundle, so refreshing these files
 // updates it in place; only a dependency change requires a repack + reinstall.
-const wanted = JSON.parse(readFileSync(resolve(app, 'package.json'), 'utf8')).dependencies;
-const current = JSON.parse(readFileSync(resolve(installed, 'package.json'), 'utf8')).dependencies;
+const installable = (file) => {
+  const pkg = JSON.parse(readFileSync(file, 'utf8'));
+  return [pkg.dependencies, pkg.optionalDependencies, pkg.overrides];
+};
+const wanted = installable(resolve(app, 'package.json'));
+const current = installable(resolve(installed, 'package.json'));
 if (JSON.stringify(wanted) !== JSON.stringify(current)) {
   throw new Error('dependencies changed - run `npm run pack` and reinstall dist/arrows.mcpb instead');
 }

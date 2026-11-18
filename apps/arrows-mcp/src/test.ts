@@ -1,9 +1,10 @@
 import { parse } from 'graphql';
 import { Base64 } from 'js-base64';
-import { build, edit, layout, validate, toCypher, toGraphQL, shareUrl, normalize, LAYOUT_IDS, type PathOp, type GraphJson } from './engine';
+import { build, edit, layout, validate, toCypher, toSeed, toGraphQL, shareUrl, normalize, LAYOUT_IDS, type PathOp, type GraphJson } from './engine';
 import { chooseLayout, layoutScore } from './autoLayout';
 import { verificationChecklist } from './checklist';
 import { renderSvg, renderPng } from './render';
+import { tryModel, statements, formatTry, growthNote, MAX_ROW_BYTES } from './relate';
 
 const results: string[] = [];
 const check = async (name: string, fn: () => unknown | Promise<unknown>): Promise<void> => {
@@ -421,9 +422,19 @@ async function main(): Promise<void> {
     }, 'hierarchical');
     const at = (id: string) => (out.json.nodes as { id: string; position: { x: number; y: number } }[]).find((n) => n.id === id)!.position;
     const [a, b, c] = [at('a'), at('b'), at('c')];
-    const t = (b.y - a.y) / (c.y - a.y);
-    const gap = Math.abs(b.x - (a.x + t * (c.x - a.x)));
+    const t = (b.x - a.x) / (c.x - a.x);
+    const gap = Math.abs(b.y - (a.y + t * (c.y - a.y)));
     assert(gap > 150, `node B sits ${Math.round(gap)}px from the A-C edge`);
+  });
+
+  await check('a chain auto-lays out left to right: layers advance along x, not y', async () => {
+    const out = await build({
+      nodes: [{ id: 'a', caption: 'A' }, { id: 'b', caption: 'B' }, { id: 'c', caption: 'C' }, { id: 'd', caption: 'D' }],
+      relationships: [{ fromId: 'a', toId: 'b', type: 'X' }, { fromId: 'b', toId: 'c', type: 'X' }, { fromId: 'c', toId: 'd', type: 'X' }],
+    });
+    const p = (out.json.nodes as { position: { x: number; y: number } }[]).map((n) => n.position);
+    assert(p.every((q, i) => i === 0 || q.x > p[i - 1].x), `x does not advance along the chain: ${JSON.stringify(p)}`);
+    assert(p.every((q) => q.y === p[0].y), `a chain should stay on one row: ${JSON.stringify(p)}`);
   });
 
   await check('chooseLayout picks radial for a hub-and-spoke shape', () => {
@@ -807,6 +818,172 @@ async function main(): Promise<void> {
       assert(/is not a valid GraphQL name/.test(e instanceof Error ? e.message : String(e)), `unclear reason: ${e}`);
     }
     assert(threw, 'a non-ASCII caption produced SDL instead of a clear error - GraphQL has no way to escape it');
+  });
+
+  await check('relate: statements splits on ; outside quotes and drops // comments', () => {
+    const got = statements('// head\nCREATE (:A {t: "x; y"}); // tail ; here\nCREATE (:B {t: \'it\\\'s; ok\'});\nRETURN 1');
+    assert(got.length === 3, `expected 3 statements, got ${JSON.stringify(got)}`);
+    assert(got[0].includes('"x; y"'), `split inside a string: ${JSON.stringify(got)}`);
+    assert(got[1].includes("it\\'s; ok"), `split inside an escaped string: ${JSON.stringify(got)}`);
+  });
+
+  const movies = await build({
+    nodes: [
+      { id: 'p', labels: ['Person'], properties: { name: 'string!', born: 'integer', tags: '[string]', joined: 'datetime' } },
+      { id: 'p2', labels: ['Person'], properties: {} },
+      { id: 'm', labels: ['Movie'], properties: { title: 'string' } },
+    ],
+    relationships: [
+      { fromId: 'p', toId: 'm', type: 'ACTED_IN', properties: { roles: 'string' } },
+      { fromId: 'p', toId: 'p2', type: 'KNOWS', properties: {} },
+    ],
+  });
+
+  await check('seed: deterministic, one group per label set, chunked', () => {
+    const a = toSeed(movies.json, 50, 20);
+    assert(JSON.stringify(a) === JSON.stringify(toSeed(movies.json, 50, 20)), 'same input gave different statements');
+    const nodeStmts = a.filter((q) => q.startsWith('UNWIND'));
+    assert(nodeStmts.filter((q) => q.includes(':Person')).length === 3, `Person drawn twice must be one group of 3 chunks, got ${nodeStmts.length} node statements`);
+    assert(a.some((q) => q.includes('collect(a)')), 'relationships are not wired through collect()');
+    assert(!a.some((q) => /\bAS as\b/.test(q)), '`as` is reserved and must not be used as a variable');
+  });
+
+  await check('seed: a huge row count is clamped, not trusted', () => {
+    const a = toSeed(movies.json, 10_000_000);
+    assert(a.every((q) => q.length < 2000), 'a statement embeds a row-count-sized payload');
+  });
+
+  const seeded = await tryModel(movies.json, { queries: [], seed: 30 });
+  await check('relate: load-only seeds every label and relationship, honouring the constraints', () => {
+    if (!seeded.available) return assert(/not installed/.test(seeded.reason), `unclear reason: ${seeded.reason}`);
+    const r = seeded.runs[0];
+    assert(!r.setupError, `seed rejected by its own constraints: ${r.setupError}`);
+    const c = r.counts!;
+    assert(c.labels.Person === 30 && c.labels.Movie === 30, `wrong node counts ${JSON.stringify(c)}`);
+    assert(c.relationships.ACTED_IN === 90 && c.relationships.KNOWS === 90, `wrong relationship counts ${JSON.stringify(c)}`);
+  });
+
+  await check('relate: chunked seed statements load the same graph as one chunk', async () => {
+    if (!seeded.available) return;
+    const chunked = await tryModel(movies.json, {
+      queries: ['MATCH (p:Person) RETURN count(DISTINCT p.name) AS names, count(p) AS people'],
+      seed: 0,
+      data: toSeed(movies.json, 30, 7).join(';\n'),
+    });
+    assert(chunked.available && !chunked.runs[0].setupError, `chunked seed failed to load: ${chunked.available && chunked.runs[0].setupError}`);
+    const row = chunked.available ? chunked.runs[0].outcomes[0].rows?.[0] : undefined;
+    // counts alone would pass if every chunk restarted its row numbers; distinct values would not
+    assert(row?.people === 30 && row.names === 30, `chunks repeated values or changed the size: ${JSON.stringify(row)}`);
+  });
+
+  await check('relate: run profiles a query, warns on a missing index and a cartesian product', async () => {
+    const r = await tryModel(movies.json, {
+      seed: 200,
+      queries: ["MATCH (p:Person {name: 'v5'}) RETURN p.born AS b", 'MATCH (a:Person), (b:Movie) RETURN count(*) AS c'],
+    });
+    if (!r.available) return;
+    const [lookup, cart] = r.runs[0].outcomes;
+    assert(!lookup.error && lookup.rows?.length === 1 && typeof lookup.dbHits === 'number', `no profile for the lookup: ${JSON.stringify(lookup)}`);
+    assert(lookup.warnings.some((w) => /Missing index/.test(w.title) && /CREATE INDEX/.test(w.remedy ?? '')), `no missing-index warning: ${JSON.stringify(lookup.warnings)}`);
+    assert(cart.warnings.some((w) => /Cartesian/i.test(w.title)), `no cartesian warning: ${JSON.stringify(cart.warnings)}`);
+    assert(!lookup.warnings.concat(cart.warnings).some((w) => /Estimation/i.test(w.title)), 'engine-internal EstimationMiss leaked into warnings');
+  });
+
+  await check('relate: profile:false skips the plan; a query already starting with PROFILE still runs', async () => {
+    const r = await tryModel(movies.json, { seed: 20, profile: false, queries: ['MATCH (p:Person) RETURN count(p) AS c'] });
+    const r2 = await tryModel(movies.json, { seed: 20, queries: ['PROFILE MATCH (p:Person) RETURN count(p) AS c'] });
+    if (!r.available || !r2.available) return;
+    assert(r.runs[0].outcomes[0].dbHits === undefined, 'profile:false still profiled');
+    assert(!r2.runs[0].outcomes[0].error, `a PROFILE-prefixed query was double-prefixed: ${r2.runs[0].outcomes[0].error}`);
+  });
+
+  await check('relate: compile catches syntax errors and misspellings without executing', async () => {
+    const r = await tryModel(movies.json, {
+      mode: 'compile',
+      queries: ['MATCH (p:Persn) RETURN p.name', 'MATCH (p:Person) RETURN p.nmae', 'MATCH (p)-[:ACTS_IN]->(m) RETURN m', 'MATCH (p:Person RETURN p', 'MATCH (p:Person) RETURN p.name'],
+    });
+    if (!r.available) return;
+    const [label, prop, rel, syntax, ok] = r.runs[0].outcomes;
+    assert(label.warnings.some((w) => /Unknown label/.test(w.title)), `misspelt label not flagged: ${JSON.stringify(label)}`);
+    assert(prop.warnings.some((w) => /Unknown property/.test(w.title)), `misspelt property not flagged: ${JSON.stringify(prop)}`);
+    assert(rel.warnings.some((w) => /Unknown relationship/.test(w.title)), `misspelt relationship not flagged: ${JSON.stringify(rel)}`);
+    assert(!!syntax.error, 'a syntax error was not reported');
+    assert(!ok.error && ok.warnings.length === 0, `a valid query got noise on a one-row-per-label store: ${JSON.stringify(ok)}`);
+    assert(ok.rows === undefined, 'compile mode returned rows, so it executed');
+  });
+
+  await check('relate: growth compares two sizes and classifies the cost', async () => {
+    const r = await tryModel(movies.json, { seed: 300, growth: true, queries: ['MATCH (p:Person) RETURN count(p) AS c', 'MATCH (a:Person), (b:Person) RETURN count(*) AS c'] });
+    if (!r.available) return;
+    assert(r.runs.length === 2 && r.runs[0].seed === 30 && r.runs[1].seed === 300, `wrong scales: ${JSON.stringify(r.runs.map((x) => x.seed))}`);
+    const [linear, quad] = [0, 1].map((i) => r.runs[1].outcomes[i].dbHits! / r.runs[0].outcomes[i].dbHits!);
+    assert(quad > 30, `cross product should grow ~100x for 10x data, grew ${quad.toFixed(1)}x`);
+    assert(linear < 20, `a label count should grow ~10x, grew ${linear.toFixed(1)}x`);
+    const text = formatTry(r.runs, { mode: 'run', profile: true, hasQueries: true }).text;
+    assert(/growth: db hits x/.test(text) && /overhead/.test(text), 'report lacks the growth line or the PROFILE overhead note');
+  });
+
+  await check('relate: growthNote classifies constant, linear, worse and quadratic', () => {
+    assert(/constant/.test(growthNote(100, 110, 10)), growthNote(100, 110, 10));
+    assert(/linear/.test(growthNote(100, 1000, 10)), growthNote(100, 1000, 10));
+    assert(/worse than linear/.test(growthNote(100, 4000, 10)), growthNote(100, 4000, 10));
+    assert(/quadratic/.test(growthNote(100, 10000, 10)), growthNote(100, 10000, 10));
+    assert(/not measurable/.test(growthNote(0, 10, 10)), growthNote(0, 10, 10));
+  });
+
+  await check('relate: bad option combinations are refused with a message the model can act on', async () => {
+    const refuse = async (opts: Parameters<typeof tryModel>[1], pattern: RegExp, g = movies.json) => {
+      let msg = '';
+      try {
+        const r = await tryModel(g, opts);
+        if (!r.available) return; // engine not installed: options are checked after that, nothing to assert
+      } catch (e) {
+        msg = e instanceof Error ? e.message : String(e);
+      }
+      assert(pattern.test(msg), `expected ${pattern} but got "${msg}"`);
+    };
+    await refuse({ queries: [], mode: 'compile' }, /needs `queries`/);
+    await refuse({ queries: ['RETURN 1'], growth: true, seed: 50 }, /at least 100/);
+    await refuse({ queries: ['RETURN 1'], growth: true, profile: false }, /profile on/);
+    await refuse({ queries: ['RETURN 1'], seed: 10 }, /schema model/, instance.json);
+  });
+
+  await check('relate: a constraint violation in data is a load error, not a query error', async () => {
+    const r = await tryModel(movies.json, { seed: 0, data: 'CREATE (:Person {name: 5});', queries: ['RETURN 1'] });
+    if (!r.available) return;
+    assert(!!r.runs[0].setupError && r.runs[0].outcomes.length === 0, 'a rejected row was not reported as a setup error');
+    assert(formatTry(r.runs, { mode: 'run', profile: true, hasQueries: true }).isError, 'the report did not flag the failure');
+  });
+
+  await check('relate: when the host blocks child processes, the engine runs on a worker thread with the same results', async () => {
+    const cp = require('node:child_process');
+    const real = cp.spawn;
+    cp.spawn = () => {
+      throw new Error('blocked by host');
+    };
+    try {
+      const r = await tryModel(movies.json, { seed: 50, growth: false, queries: ['MATCH (p:Person) RETURN count(p) AS c', 'MATCH (a:Person), (b:Person) RETURN count(*) AS c'] });
+      if (!r.available) return;
+      const [count, cart] = r.runs[0].outcomes;
+      assert(count.rows?.[0].c === 50 && typeof count.dbHits === 'number', `worker run gave ${JSON.stringify(count)}`);
+      assert(cart.warnings.some((w) => /Cartesian/i.test(w.title)), `worker run lost the warnings: ${JSON.stringify(cart.warnings)}`);
+    } finally {
+      cp.spawn = real;
+    }
+  });
+
+  await check('relate: huge integers and huge cells do not break the result; writes cannot leak between queries', async () => {
+    const m = await build({ nodes: [{ id: 'p', labels: ['P'], properties: { n: 'integer' } }], relationships: [] });
+    const r = await tryModel(m.json, {
+      seed: 0,
+      data: 'CREATE (:P {n: 1});',
+      queries: ['RETURN 9007199254740993 AS big', 'MATCH (x:P) DETACH DELETE x', 'MATCH (x:P) RETURN count(x) AS c', "RETURN reduce(s = '', i IN range(1, 5000) | s + 'xxxxxxxxxx') AS huge"],
+    });
+    if (!r.available) return;
+    const [big, , count, huge] = r.runs[0].outcomes;
+    assert(big.rows?.[0].big === '9007199254740993', `bigint lost: ${JSON.stringify(big)}`);
+    assert(count.rows?.[0].c === 1, `an earlier query leaked into a later one: ${JSON.stringify(count)}`);
+    assert(JSON.stringify(huge.rows).length <= MAX_ROW_BYTES + 200, `a 50 KB cell was not capped: ${JSON.stringify(huge.rows).length} bytes`);
   });
 
   console.log(results.join('\n'));

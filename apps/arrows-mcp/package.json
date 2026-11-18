@@ -26,5 +26,15 @@
     "typescript": "^5.5.0",
     "@types/node": "^20.0.0",
     "@types/jsdom": "^21.1.7"
+  },
+  "optionalDependencies": {
+    "@relate/relate": "https://github.com/relatedb/relate/releases/download/v0.1.3/relate-relate-0.1.3.tgz"
+  },
+  "overrides": {
+    "@relate/relate-darwin-arm64": "https://github.com/relatedb/relate/releases/download/v0.1.3/relate-relate-darwin-arm64-0.1.3.tgz",
+    "@relate/relate-darwin-x64": "https://github.com/relatedb/relate/releases/download/v0.1.3/relate-relate-darwin-x64-0.1.3.tgz",
+    "@relate/relate-linux-arm64": "https://github.com/relatedb/relate/releases/download/v0.1.3/relate-relate-linux-arm64-0.1.3.tgz",
+    "@relate/relate-linux-x64": "https://github.com/relatedb/relate/releases/download/v0.1.3/relate-relate-linux-x64-0.1.3.tgz",
+    "@relate/relate-win32-x64": "https://github.com/relatedb/relate/releases/download/v0.1.3/relate-relate-win32-x64-0.1.3.tgz"
   }
 }

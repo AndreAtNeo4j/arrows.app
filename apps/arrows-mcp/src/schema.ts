@@ -69,7 +69,7 @@ export function isSchemaModel(graph: Graph): boolean {
 }
 
 /** Neo4j quotes identifiers in backticks and escapes an internal backtick by doubling it. */
-function escapeId(name: string): string {
+export function escapeId(name: string): string {
   return /^[A-Za-z][A-Za-z0-9_]*$/.test(name) ? name : `\`${name.replace(/`/g, '``')}\``;
 }
 

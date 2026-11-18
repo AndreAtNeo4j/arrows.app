@@ -29,7 +29,14 @@ cpSync(resolve(app, 'README.md'), resolve(stage, 'README.md'));
 writeFileSync(
   resolve(stage, 'package.json'),
   JSON.stringify(
-    { name: 'arrows-mcp-extension', version: pkg.version, private: true, dependencies: pkg.dependencies },
+    {
+      name: 'arrows-mcp-extension',
+      version: pkg.version,
+      private: true,
+      dependencies: pkg.dependencies,
+      optionalDependencies: pkg.optionalDependencies,
+      overrides: pkg.overrides,
+    },
     null,
     2,
   ) + '\n',

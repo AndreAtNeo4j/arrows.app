@@ -75,7 +75,7 @@ rewrites that file from its own state and will drop the entry.
 ## Layout
 
 `arrows_build` picks the layout automatically from the graph's shape - a hub node goes
-radial, a tree/DAG goes hierarchical (top-down), a small dense cluster goes circular,
+radial, a tree/DAG goes hierarchical (left to right), a small dense cluster goes circular,
 otherwise force. Pass `layout` explicitly to override.
 
 ## Appearance
